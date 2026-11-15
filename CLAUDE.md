@@ -6,16 +6,17 @@ disagree, the spec wins unless a decision below says otherwise.
 
 ## Commands
 
-| What                       | Command                                                    |
-| -------------------------- | ---------------------------------------------------------- |
-| Install                    | `pnpm install` (pnpm 9, Node ≥ 22)                         |
-| Dev (web + server)         | `pnpm dev` (web :5173, server :8787, reads root `.env`)    |
-| Offline dev (no wallet/DB) | `NETWORK=mock MONGODB_URI=memory pnpm dev`                 |
-| Lint / format              | `pnpm lint`, `pnpm format` / `pnpm format:check`           |
-| Typecheck                  | `pnpm typecheck`                                           |
-| Tests (all)                | `pnpm test` (`pnpm test:coverage` for coverage)            |
-| One project's tests        | `pnpm vitest run --project server` (shared/game-sdk/web/…) |
-| Build                      | `pnpm build`                                               |
+| What                       | Command                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| Install                    | `pnpm install` (pnpm 9, Node ≥ 22)                                                       |
+| Dev (web + server)         | `pnpm dev` (web :5173, server :8787, reads root `.env`)                                  |
+| Offline dev (no wallet/DB) | `NETWORK=mock MONGODB_URI=memory pnpm dev`                                               |
+| Lint / format              | `pnpm lint`, `pnpm format` / `pnpm format:check`                                         |
+| Typecheck                  | `pnpm typecheck`                                                                         |
+| Tests (all)                | `pnpm test` (`pnpm test:coverage` for coverage)                                          |
+| One project's tests        | `pnpm vitest run --project server` (shared/game-sdk/web/…)                               |
+| Build                      | `pnpm build`                                                                             |
+| E2E (Playwright, mock)     | `pnpm e2e` (first time: `pnpm --filter @coinclash/web exec playwright install chromium`) |
 
 Every commit must leave lint, format, typecheck, tests and build green. A pre-commit hook
 (husky + lint-staged) lints and formats staged files.
@@ -23,7 +24,9 @@ Every commit must leave lint, format, typecheck, tests and build green. A pre-co
 ## Layout
 
 ```
-apps/web            React + Vite PWA (phone-first). Design tokens: src/design/tokens.css
+apps/web            React + Vite PWA (phone-first). src/design (tokens, ui.css, components),
+                    src/lib/store.ts (session/socket/cache), src/match/agent.ts (HTLC lock/claim),
+                    src/screens, src/wallet (IdentityProvider + wallets), e2e/ (Playwright)
 apps/server         Express + Socket.IO; built with tsup (bundles @coinclash/* packages)
 packages/shared     zod protocol schemas, Network type, money/format utils
 packages/rail       WalletRail + SignatureVerifier interfaces; ./mock = in-memory Spark network
@@ -106,4 +109,6 @@ non-trivial design choice, and amend `docs/SPEC.md` with a pointer when an ADR c
 - 2026-11-14: Production domain is **coinclash.vip** (passkey rpId `coinclash.vip`). Database is
   **MongoDB Atlas**; tests still use mongodb-memory-server.
 - 2026-11-14: Server core design (ADR 0007). Instant payout mode accepted, built as Phase 5b (ADR 0008). Players pick the network; test only for now (ADR 0010). Server provisioned (ADR 0004).
+- 2026-11-15: Web app architecture: one store, one route per match, MatchAgent, mock wallet over
+  HTTP in NETWORK=mock only (ADR 0011).
 - Future work (don't build): encrypt HTLC preimages at rest; one-button passkey flow.
