@@ -29,13 +29,16 @@ function need(name: string): string {
   return v;
 }
 
-async function wallet(envVar: string, tag: string): Promise<BreezSdk> {
-  return connectBreez({
+async function wallet(envVar: string): Promise<BreezSdk> {
+  const tag = envVar.toLowerCase();
+  const sdk = await connectBreez({
     network: 'regtest',
     apiKey: need('BREEZ_API_KEY'),
     mnemonic: need(envVar),
     storageDir: `./.data/regtest-${tag}`,
   });
+  await sdk.getInfo({ ensureSynced: true });
+  return sdk;
 }
 
 async function sparkAddress(sdk: BreezSdk): Promise<string> {
@@ -96,7 +99,7 @@ async function main() {
       return;
 
     case 'info': {
-      const sdk = await wallet(arg ?? 'HOUSE_MNEMONIC', (arg ?? 'house').toLowerCase());
+      const sdk = await wallet(arg ?? 'HOUSE_MNEMONIC');
       const info = await sdk.getInfo({ ensureSynced: true });
       console.log({
         identity: info.identityPubkey,
@@ -110,7 +113,7 @@ async function main() {
     case 'fund': {
       const envVar = arg ?? 'HOUSE_MNEMONIC';
       const amount = Number(extra ?? 50_000);
-      const sdk = await wallet(envVar, envVar.toLowerCase());
+      const sdk = await wallet(envVar);
       const before = await balance(sdk);
       const address = (await sdk.receivePayment({ paymentMethod: { type: 'bitcoinAddress' } }))
         .paymentRequest;
@@ -153,12 +156,12 @@ async function main() {
     }
 
     case 'smoke': {
-      const a = await wallet('REGTEST_PLAYER_A_MNEMONIC', 'player-a');
-      const b = await wallet('REGTEST_PLAYER_B_MNEMONIC', 'player-b');
+      const a = await wallet('REGTEST_PLAYER_A_MNEMONIC');
+      const b = await wallet('REGTEST_PLAYER_B_MNEMONIC');
       const [addrA, addrB] = [await sparkAddress(a), await sparkAddress(b)];
       if ((await balance(a)) < STAKE * 2) {
         console.log('Player A is short; topping up from the house wallet');
-        const house = await wallet('HOUSE_MNEMONIC', 'house');
+        const house = await wallet('HOUSE_MNEMONIC');
         await breezHouseWallet(house).pay(addrA, STAKE * 5, `smoke-topup:${Date.now()}`);
         await waitFor('top-up', async () => ((await balance(a)) >= STAKE * 2 ? true : null));
         await house.disconnect();

@@ -51,11 +51,16 @@ export interface HouseWallet {
 }
 
 export function breezHouseWallet(sdk: BreezSdk): HouseWallet {
+  // A freshly connected SDK may not know its funds yet ("insufficient funds"): sync once first.
+  let synced: Promise<unknown> | null = null;
+  const ensureSynced = () => (synced ??= sdk.getInfo({ ensureSynced: true }));
   return {
     async balance() {
+      await ensureSynced();
       return (await sdk.getInfo({ ensureSynced: false })).balanceSats;
     },
     async pay(sparkAddress, amount, idempotencyKey) {
+      await ensureSynced();
       const prepareResponse = await sdk.prepareSendPayment({
         paymentRequest: { type: 'input', input: sparkAddress },
         amount: BigInt(amount),
