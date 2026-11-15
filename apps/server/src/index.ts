@@ -16,6 +16,7 @@ async function main() {
     const mongo = await connectMongo(config.MONGODB_URI, config.MONGODB_DB);
     deps.matches = mongo.matches;
     deps.users = mongo.users;
+    deps.push = mongo.push;
     closers.push(() => mongo.client.close());
     console.info(`[coinclash] connected to MongoDB (db=${config.MONGODB_DB})`);
   } else {

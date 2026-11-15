@@ -19,6 +19,8 @@ export interface MatchRepo {
   insert(doc: MatchDoc): Promise<void>;
   get(id: string): Promise<MatchDoc | null>;
   getByInvite(inviteCode: string): Promise<MatchDoc | null>;
+  /** The open (PROPOSED) match with this 6-digit join code. */
+  getByJoinCode(code: string): Promise<MatchDoc | null>;
   /** Save iff the stored version is `doc.version - 1`; otherwise throw VersionConflictError. */
   save(doc: MatchDoc): Promise<void>;
   listForPlayer(player: string, limit: number): Promise<MatchDoc[]>;
@@ -65,6 +67,10 @@ export class MemoryMatchRepo implements MatchRepo {
       .slice(0, limit)
       .map((d) => structuredClone(d));
   }
+  async getByJoinCode(code: string) {
+    const d = [...this.docs.values()].find((x) => x.joinCode === code && x.status === 'PROPOSED');
+    return d ? structuredClone(d) : null;
+  }
   async getByInvoice(invoice: string) {
     const d = [...this.docs.values()].find((x) => x.invoices.includes(invoice));
     return d ? structuredClone(d) : null;
@@ -89,5 +95,30 @@ export class MemoryUserRepo implements UserRepo {
   }
   async upsert(doc: UserDoc) {
     this.docs.set(doc._id, doc);
+  }
+}
+
+/** A browser push subscription (Web Push), as serialized by `PushSubscription.toJSON()`. */
+export interface PushSub {
+  readonly endpoint: string;
+  readonly keys: { readonly p256dh: string; readonly auth: string };
+}
+
+export interface PushRepo {
+  add(userId: string, sub: PushSub): Promise<void>;
+  remove(endpoint: string): Promise<void>;
+  listFor(userId: string): Promise<PushSub[]>;
+}
+
+export class MemoryPushRepo implements PushRepo {
+  private readonly subs = new Map<string, { userId: string; sub: PushSub }>();
+  async add(userId: string, sub: PushSub) {
+    this.subs.set(sub.endpoint, { userId, sub });
+  }
+  async remove(endpoint: string) {
+    this.subs.delete(endpoint);
+  }
+  async listFor(userId: string) {
+    return [...this.subs.values()].filter((s) => s.userId === userId).map((s) => s.sub);
   }
 }

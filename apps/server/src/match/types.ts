@@ -35,6 +35,8 @@ export interface Payout {
   readonly amount: number;
   readonly status: 'pending' | 'paid' | 'failed';
   readonly paymentId: string | null;
+  /** Unix ms when it was paid. */
+  readonly paidAt?: number | null;
   readonly attempts: number;
   readonly lastError: string | null;
 }
@@ -43,6 +45,8 @@ export interface Payout {
 export interface MatchDoc {
   readonly _id: string;
   readonly inviteCode: string;
+  /** Short numeric code for open invites (PROPOSED only). */
+  readonly joinCode: string | null;
   readonly gameId: string;
   readonly options: unknown;
   /** Seeds the game engine. Random per match. */

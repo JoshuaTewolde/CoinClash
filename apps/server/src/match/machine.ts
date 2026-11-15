@@ -105,6 +105,7 @@ function to(doc: MatchDoc, status: MatchStatus, now: number, cause: string): Mat
 export interface NewMatchParams {
   readonly id: string;
   readonly inviteCode: string;
+  readonly joinCode?: string | null;
   readonly seed: string;
   readonly gameId: string;
   readonly options: unknown;
@@ -120,6 +121,7 @@ export function createMatchDoc(p: NewMatchParams): MatchDoc {
   return {
     _id: p.id,
     inviteCode: p.inviteCode,
+    joinCode: p.joinCode ?? null,
     gameId: p.gameId,
     options: p.options ?? null,
     seed: p.seed,
@@ -379,7 +381,11 @@ export function applyCommand(doc: MatchDoc, cmd: MatchCommand, env: MachineEnv):
       if (cmd.player === doc.challenger || cmd.player === doc.opponent) return { doc, notices };
       if (doc.opponent) throw new MatchError('This match already has two players');
       requireStatus(doc, 'PROPOSED');
-      next = { ...to(doc, 'NEGOTIATING', now, 'opponent joined'), opponent: cmd.player };
+      next = {
+        ...to(doc, 'NEGOTIATING', now, 'opponent joined'),
+        opponent: cmd.player,
+        joinCode: null,
+      };
       break;
     }
     case 'accept': {
@@ -508,7 +514,7 @@ export function applyCommand(doc: MatchDoc, cmd: MatchCommand, env: MachineEnv):
       if (!p) throw new MatchError('Unknown payout');
       if (p.status === 'paid') return { doc, notices };
       const updated: Payout = cmd.ok
-        ? { ...p, status: 'paid', paymentId: cmd.paymentId ?? null, lastError: null }
+        ? { ...p, status: 'paid', paymentId: cmd.paymentId ?? null, lastError: null, paidAt: now }
         : { ...p, status: 'failed', attempts: p.attempts + 1, lastError: cmd.error ?? 'failed' };
       const payouts = { ...doc.payouts, [cmd.key]: updated };
       const open = Object.values(payouts).some((x) => x.status !== 'paid');

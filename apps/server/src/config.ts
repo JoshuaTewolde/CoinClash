@@ -34,6 +34,10 @@ const ConfigSchema = z
     BREEZ_STORAGE_DIR: z.string().min(1).default('./.data/breez-server'),
     /** Built web app (apps/web/dist). When set, the server also serves it (production image). */
     WEB_DIST_DIR: z.string().optional(),
+    /** Web Push (VAPID). Push is off unless both keys are set. */
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().default('https://coinclash.vip'),
     /** How stakes are held: `escrow` (active, ADR 0013) or `htlc` (dormant, ADR 0002). */
     ESCROW_MODE: z.enum(['escrow', 'htlc']).default('escrow'),
     /** Server escrow wallet (escrow mode, regtest/mainnet). Separate from the house wallet. */

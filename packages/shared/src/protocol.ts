@@ -62,6 +62,8 @@ export const ClientCommands = {
     gameId: id,
     stake: sats,
     options: z.unknown().optional(),
+    /** Challenge a friend directly (someone you've played before): no link needed. */
+    opponentId: id.optional(),
   }),
   'match:join': z.object({ inviteCode: z.string().min(6).max(32) }),
   'match:subscribe': z.object({ matchId: id }),
@@ -146,6 +148,8 @@ export interface GameInfo {
 export interface MatchView {
   readonly id: string;
   readonly inviteCode: string;
+  /** 6-digit code to join an open invite from another phone (null once someone joined). */
+  readonly joinCode: string | null;
   readonly gameId: string;
   readonly status: MatchStatus;
   readonly stake: number;
@@ -206,6 +210,20 @@ export interface PublicConfig {
   readonly games: readonly { id: string; name: string; turnModel: string }[];
   /** Regtest welcome bonus for new players, or 0 when off. */
   readonly welcomeBonusSats: number;
+}
+
+/** One line of a player's CoinClash money activity (`GET /api/activity`). */
+export interface ActivityItem {
+  readonly id: string;
+  /** Unix ms. */
+  readonly at: number;
+  readonly kind: 'stake' | 'winnings' | 'refund' | 'bonus';
+  readonly direction: 'in' | 'out';
+  readonly amount: number;
+  readonly gameId: string | null;
+  readonly opponent: string | null;
+  readonly matchId: string | null;
+  readonly status: 'pending' | 'done' | 'failed';
 }
 
 /** Public invite preview (`GET /api/invites/:code`). */

@@ -73,6 +73,7 @@ export function viewFor(
   return {
     id: doc._id,
     inviteCode: doc.inviteCode,
+    joinCode: doc.joinCode ?? null,
     gameId: doc.gameId,
     status: doc.status,
     stake: doc.stake,

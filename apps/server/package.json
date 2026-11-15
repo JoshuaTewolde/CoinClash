@@ -13,9 +13,9 @@
   "dependencies": {
     "@breeztech/breez-sdk-spark": "0.28.4",
     "@coinclash/game-connect4": "workspace:*",
+    "@coinclash/game-pool": "workspace:*",
     "@coinclash/game-rps": "workspace:*",
     "@coinclash/game-sdk": "workspace:*",
-    "@coinclash/game-pool": "workspace:*",
     "@coinclash/game-tictactoe": "workspace:*",
     "@coinclash/game-trivia": "workspace:*",
     "@coinclash/rail": "workspace:*",
@@ -24,10 +24,12 @@
     "express": "^4.21.2",
     "mongodb": "^6.12.0",
     "socket.io": "^4.8.1",
+    "web-push": "3.6.7",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/web-push": "3.6.4",
     "fast-check": "^3.23.2",
     "mongodb-memory-server": "^10.1.2",
     "socket.io-client": "^4.8.1",

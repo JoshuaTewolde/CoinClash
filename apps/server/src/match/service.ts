@@ -8,7 +8,7 @@
  *   `${kind}:${matchId}:${player}`, reconciled on boot, retried with backoff).
  * - HTLC mode (ADR 0002, dormant): re-sends released codes until the winner confirms the claim.
  */
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { isInvalid, type AnyGamePlugin } from '@coinclash/game-sdk';
 import {
   paymentHashOf,
@@ -20,6 +20,7 @@ import {
 } from '@coinclash/rail';
 import type { CodeRelease, MatchView } from '@coinclash/shared';
 import type { MatchRepo, UserRepo } from '../db/repos.js';
+import type { Notifier } from '../push.js';
 import {
   applyCommand,
   createMatchDoc,
@@ -33,7 +34,7 @@ import {
   type MatchCommand,
   type MatchNotice,
 } from './machine.js';
-import { playersOf, type EscrowMode, type MatchDoc, type Secret } from './types.js';
+import { opponentOf, playersOf, type EscrowMode, type MatchDoc, type Secret } from './types.js';
 import { viewFor, type UserInfo } from './view.js';
 
 export interface MatchEvents {
@@ -60,6 +61,8 @@ export interface MatchServiceDeps {
   readonly depositPollMs?: number;
   /** First payout retry delay; doubles per attempt. Default 5000 ms. */
   readonly payoutRetryMs?: number;
+  /** Push notifications for direct challenges and rematch offers. */
+  readonly notifier?: Notifier;
 }
 
 /** Give up automatic payout retries after this many failures (then it needs an operator). */
@@ -168,9 +171,24 @@ export class MatchService {
     this.timers.set(doc._id, timer);
   }
 
+  /** A fresh 6-digit join code not used by any open invite. */
+  private async freshJoinCode(): Promise<string> {
+    for (let i = 0; i < 10; i++) {
+      const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+      if (!(await this.deps.matches.getByJoinCode(code))) return code;
+    }
+    throw new MatchError('Could not create an invite code. Try again.');
+  }
+
+  /**
+   * New match. Without `opponentId` it's an open invite (link, QR or 6-digit code). With it, it's
+   * a direct challenge to a friend (someone you've played before): it starts NEGOTIATING, shows
+   * up in their app at once, and sends them a push notification.
+   */
   async create(
     player: string,
-    input: { gameId: string; stake: number; options?: unknown },
+    input: { gameId: string; stake: number; options?: unknown; opponentId?: string },
+    opts: { rematchOf?: string } = {},
   ): Promise<MatchDoc> {
     const env = this.env();
     const mode = this.deps.escrowMode ?? 'escrow';
@@ -185,9 +203,21 @@ export class MatchService {
       options = plugin.parseOptions(input.options);
       if (isInvalid(options)) throw new MatchError(options.reason);
     }
-    const doc = createMatchDoc({
+    const opponent = input.opponentId ?? null;
+    if (opponent) {
+      if (opponent === player) throw new MatchError('You can’t challenge yourself');
+      if (!opts.rematchOf) {
+        if (!(await this.deps.users.get(opponent))) throw new MatchError('Player not found');
+        const past = await this.deps.matches.listForPlayer(player, 200);
+        if (!past.some((d) => opponentOf(d, player) === opponent)) {
+          throw new MatchError('You can challenge friends you’ve played. Send a link instead.');
+        }
+      }
+    }
+    let doc = createMatchDoc({
       id: randomUUID(),
       inviteCode: randomBytes(8).toString('base64url'),
+      joinCode: opponent ? null : await this.freshJoinCode(),
       seed: randomBytes(16).toString('hex'),
       gameId: plugin.id,
       options,
@@ -196,9 +226,46 @@ export class MatchService {
       now: env.now,
       mode,
     });
+    if (opponent) {
+      doc = {
+        ...doc,
+        status: 'NEGOTIATING',
+        opponent,
+        rematchOf: opts.rematchOf ?? null,
+        transitions: [
+          ...doc.transitions,
+          {
+            from: 'PROPOSED',
+            to: 'NEGOTIATING',
+            at: env.now,
+            cause: opts.rematchOf ? 'rematch' : 'direct challenge',
+          },
+        ],
+      };
+    }
     await this.deps.matches.insert(doc);
     this.deps.events.changed(doc);
+    if (opponent) {
+      const me = await this.deps.users.get(player);
+      const who = me?.nickname ?? 'A friend';
+      const sats = `${input.stake.toLocaleString('en-US')} sats`;
+      void this.deps.notifier
+        ?.notify(opponent, {
+          title: opts.rematchOf ? `${who} wants a rematch` : `${who} challenged you`,
+          body: `${plugin.name} for ${sats}. Tap to answer.`,
+          url: `/m/${doc._id}`,
+          tag: `match-${doc._id}`,
+        })
+        .catch((err) => console.warn('[push] notify failed', err));
+    }
     return doc;
+  }
+
+  /** Resolve a 6-digit join code to its invite code (open invites only). */
+  async inviteForJoinCode(code: string): Promise<string> {
+    const doc = await this.deps.matches.getByJoinCode(code);
+    if (!doc) throw new MatchError('No open challenge with that code');
+    return doc.inviteCode;
   }
 
   async join(player: string, inviteCode: string): Promise<MatchDoc> {
@@ -249,25 +316,16 @@ export class MatchService {
     if (!old.result) throw new MatchError('This match has no result yet');
     if (old.rematchId) return this.load(old.rematchId);
     const other = playersOf(old).find((p) => p !== player)!;
-    const created = await this.create(player, {
-      gameId: old.gameId,
-      stake: old.stake,
-      ...(old.options !== null ? { options: old.options } : {}),
-    });
-    const now = this.clock();
-    const fresh: MatchDoc = {
-      ...created,
-      status: 'NEGOTIATING',
-      opponent: other,
-      rematchOf: old._id,
-      transitions: [
-        ...created.transitions,
-        { from: 'PROPOSED', to: 'NEGOTIATING', at: now, cause: 'rematch' },
-      ],
-      version: created.version + 1,
-    };
-    await this.deps.matches.save(fresh);
-    this.deps.events.changed(fresh);
+    const fresh = await this.create(
+      player,
+      {
+        gameId: old.gameId,
+        stake: old.stake,
+        ...(old.options !== null ? { options: old.options } : {}),
+        opponentId: other,
+      },
+      { rematchOf: old._id },
+    );
     await this.exclusive(old._id, async () => {
       const cur = await this.load(old._id);
       const linked = { ...cur, rematchId: fresh._id, version: cur.version + 1 };

@@ -14,13 +14,22 @@ import {
 } from '@coinclash/shared';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { Server as SocketServer, type Socket } from 'socket.io';
-import { ZodError, type z } from 'zod';
+import { z, ZodError } from 'zod';
 import { Auth, AuthError } from './auth.js';
 import type { ServerConfig } from './config.js';
+import { activityFor } from './activity.js';
 import type { WelcomeBonus } from './bonus.js';
 import { friendStats } from './friends.js';
 import { mockWalletRouter } from './mockWallet.js';
-import { MemoryMatchRepo, MemoryUserRepo, type MatchRepo, type UserRepo } from './db/repos.js';
+import {
+  MemoryMatchRepo,
+  MemoryPushRepo,
+  MemoryUserRepo,
+  type MatchRepo,
+  type PushRepo,
+  type UserRepo,
+} from './db/repos.js';
+import { noopNotifier, webPushNotifier } from './push.js';
 import { games as defaultGames } from './games.js';
 import { MatchError } from './match/machine.js';
 import { MatchService } from './match/service.js';
@@ -36,6 +45,8 @@ export interface AppDeps {
   bonus?: WelcomeBonus;
   matches?: MatchRepo;
   users?: UserRepo;
+  /** Web Push subscriptions. */
+  push?: PushRepo;
   verifier?: SignatureVerifier;
   plugins?: ReadonlyMap<string, AnyGamePlugin>;
   /** Unix ms. */
@@ -72,6 +83,16 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
   const mockNet =
     config.NETWORK === 'mock' ? new MockNetwork(() => Math.floor(clock() / 1000)) : null;
   const escrow = deps.escrow ?? (mockNet ? new MockEscrow(mockNet) : undefined);
+  const pushRepo = deps.push ?? new MemoryPushRepo();
+  const pushEnabled = Boolean(config.VAPID_PUBLIC_KEY && config.VAPID_PRIVATE_KEY);
+  const notifier = pushEnabled
+    ? webPushNotifier({
+        repo: pushRepo,
+        publicKey: config.VAPID_PUBLIC_KEY!,
+        privateKey: config.VAPID_PRIVATE_KEY!,
+        subject: config.VAPID_SUBJECT,
+      })
+    : noopNotifier;
 
   const auth = new Auth({
     secret: config.SESSION_SECRET,
@@ -98,6 +119,7 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
     verifier,
     clock,
     escrow,
+    notifier,
     escrowMode: config.ESCROW_MODE,
     depositPollMs: deps.depositPollMs,
     payoutRetryMs: deps.payoutRetryMs,
@@ -179,6 +201,65 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
     const me = res.locals.userId as string;
     const docs = await service.listFor(me);
     res.json(await Promise.all(docs.map((d) => service.view(d, me))));
+  });
+
+  // ---------- Push notifications ----------
+  const PushSubSchema = z.object({
+    endpoint: z.string().url().max(2048),
+    keys: z.object({ p256dh: z.string().min(1).max(256), auth: z.string().min(1).max(256) }),
+  });
+
+  app.get('/api/push/key', (_req, res) => {
+    res.json({ publicKey: pushEnabled ? config.VAPID_PUBLIC_KEY : null });
+  });
+
+  app.post('/api/push/subscribe', requireUser, async (req, res) => {
+    try {
+      const sub = PushSubSchema.parse(req.body);
+      await pushRepo.add(res.locals.userId as string, sub);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: userMessage(err) });
+    }
+  });
+
+  app.post('/api/push/unsubscribe', requireUser, async (req, res) => {
+    try {
+      const { endpoint } = z.object({ endpoint: z.string().max(2048) }).parse(req.body);
+      await pushRepo.remove(endpoint);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: userMessage(err) });
+    }
+  });
+
+  /** 6-digit code → invite code (open invites only). */
+  app.get('/api/join/:code', async (req, res) => {
+    try {
+      const code = z
+        .string()
+        .regex(/^\d{6}$/)
+        .parse(req.params.code);
+      res.json({ inviteCode: await service.inviteForJoinCode(code) });
+    } catch (err) {
+      res.status(404).json({ ok: false, error: userMessage(err) });
+    }
+  });
+
+  /** Wallet history with names and games (#7). */
+  app.get('/api/activity', requireUser, async (_req, res) => {
+    const me = res.locals.userId as string;
+    const docs = await matches.listForPlayer(me, 200);
+    const ids = new Set(docs.flatMap((d) => [d.challenger, d.opponent ?? '']).filter(Boolean));
+    const known = await users.getMany([...ids]);
+    const nicknames = new Map(known.map((u) => [u._id, u.nickname]));
+    const self = await users.get(me);
+    res.json(
+      activityFor(me, docs, nicknames, {
+        paidAt: deps.bonus ? (self?.bonusPaidAt ?? null) : null,
+        amount: config.WELCOME_BONUS_SATS,
+      }),
+    );
   });
 
   app.get('/api/friends', requireUser, async (req, res) => {

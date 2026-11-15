@@ -1,6 +1,13 @@
 import { MongoClient, type Collection, type Db, type Filter } from 'mongodb';
 import type { MatchDoc } from '../match/types.js';
-import { VersionConflictError, type MatchRepo, type UserDoc, type UserRepo } from './repos.js';
+import {
+  VersionConflictError,
+  type MatchRepo,
+  type PushRepo,
+  type PushSub,
+  type UserDoc,
+  type UserRepo,
+} from './repos.js';
 
 const FINAL = ['SETTLED', 'DECLINED', 'CANCELLED', 'EXPIRED', 'FAILED'];
 
@@ -27,6 +34,9 @@ export class MongoMatchRepo implements MatchRepo {
       .limit(limit)
       .toArray();
   }
+  async getByJoinCode(code: string) {
+    return this.col.findOne({ joinCode: code, status: 'PROPOSED' } as Filter<MatchDoc>);
+  }
   async getByInvoice(invoice: string) {
     return this.col.findOne({ invoices: invoice } as Filter<MatchDoc>);
   }
@@ -51,11 +61,25 @@ export class MongoUserRepo implements UserRepo {
   }
 }
 
+export class MongoPushRepo implements PushRepo {
+  constructor(private readonly col: Collection<{ _id: string; userId: string; sub: PushSub }>) {}
+  async add(userId: string, sub: PushSub) {
+    await this.col.replaceOne({ _id: sub.endpoint }, { userId, sub }, { upsert: true });
+  }
+  async remove(endpoint: string) {
+    await this.col.deleteOne({ _id: endpoint });
+  }
+  async listFor(userId: string) {
+    return (await this.col.find({ userId }).toArray()).map((d) => d.sub);
+  }
+}
+
 export interface MongoRepos {
   client: MongoClient;
   db: Db;
   matches: MongoMatchRepo;
   users: MongoUserRepo;
+  push: MongoPushRepo;
 }
 
 export async function connectMongo(uri: string, dbName: string): Promise<MongoRepos> {
@@ -64,13 +88,22 @@ export async function connectMongo(uri: string, dbName: string): Promise<MongoRe
   const db = client.db(dbName);
   const matches = db.collection<MatchDoc>('matches');
   const users = db.collection<UserDoc>('users');
+  const push = db.collection<{ _id: string; userId: string; sub: PushSub }>('push');
   await Promise.all([
+    push.createIndex({ userId: 1 }),
     matches.createIndex({ inviteCode: 1 }, { unique: true }),
     matches.createIndex({ challenger: 1, updatedAt: -1 }),
     matches.createIndex({ opponent: 1, updatedAt: -1 }),
     matches.createIndex({ status: 1 }),
     matches.createIndex({ invoices: 1 }),
+    matches.createIndex({ joinCode: 1 }, { partialFilterExpression: { status: 'PROPOSED' } }),
     matches.createIndex({ payoutsOpen: 1 }, { partialFilterExpression: { payoutsOpen: true } }),
   ]);
-  return { client, db, matches: new MongoMatchRepo(matches), users: new MongoUserRepo(users) };
+  return {
+    client,
+    db,
+    matches: new MongoMatchRepo(matches),
+    users: new MongoUserRepo(users),
+    push: new MongoPushRepo(push),
+  };
 }
