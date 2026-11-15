@@ -13,6 +13,8 @@ the spec carries an amendment note that points here.
 | 0004 | [Hosting: coinclash.vip on Vultr, MongoDB Atlas](0004-hosting-and-database.md)                | Accepted           |
 | 0005 | [One Breez API key for now](0005-breez-api-keys.md)                                           | Accepted (revisit) |
 | 0006 | [Game plug-in interface details](0006-game-plugin-interface.md)                               | Accepted           |
+| 0007 | [Server core: matches, protocol, auth, persistence, timers](0007-server-core.md)              | Accepted           |
+| 0008 | [Optional "Instant payout" mode (server as intermediary)](0008-instant-payout-mode.md)        | **Proposed**       |
 
 Template: **Context** (why we had to decide) → **Decision** → **Alternatives considered** →
 **Consequences / trade-offs** → **Open questions**.

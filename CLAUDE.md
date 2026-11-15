@@ -6,15 +6,16 @@ disagree, the spec wins unless a decision below says otherwise.
 
 ## Commands
 
-| What                | Command                                                    |
-| ------------------- | ---------------------------------------------------------- |
-| Install             | `pnpm install` (pnpm 9, Node ≥ 22)                         |
-| Dev (web + server)  | `pnpm dev` (web :5173, server :8787, reads root `.env`)    |
-| Lint / format       | `pnpm lint`, `pnpm format` / `pnpm format:check`           |
-| Typecheck           | `pnpm typecheck`                                           |
-| Tests (all)         | `pnpm test` (`pnpm test:coverage` for coverage)            |
-| One project's tests | `pnpm vitest run --project server` (shared/game-sdk/web/…) |
-| Build               | `pnpm build`                                               |
+| What                       | Command                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| Install                    | `pnpm install` (pnpm 9, Node ≥ 22)                         |
+| Dev (web + server)         | `pnpm dev` (web :5173, server :8787, reads root `.env`)    |
+| Offline dev (no wallet/DB) | `NETWORK=mock MONGODB_URI=memory pnpm dev`                 |
+| Lint / format              | `pnpm lint`, `pnpm format` / `pnpm format:check`           |
+| Typecheck                  | `pnpm typecheck`                                           |
+| Tests (all)                | `pnpm test` (`pnpm test:coverage` for coverage)            |
+| One project's tests        | `pnpm vitest run --project server` (shared/game-sdk/web/…) |
+| Build                      | `pnpm build`                                               |
 
 Every commit must leave lint, format, typecheck, tests and build green. A pre-commit hook
 (husky + lint-staged) lints and formats staged files.
@@ -25,6 +26,7 @@ Every commit must leave lint, format, typecheck, tests and build green. A pre-co
 apps/web            React + Vite PWA (phone-first). Design tokens: src/design/tokens.css
 apps/server         Express + Socket.IO; built with tsup (bundles @coinclash/* packages)
 packages/shared     zod protocol schemas, Network type, money/format utils
+packages/rail       WalletRail + SignatureVerifier interfaces; ./mock = in-memory Spark network
 packages/game-sdk   GamePlugin interface, seeded RNG, test helpers
 packages/games/*    one package per game: src/engine.ts (export "./engine", server-safe)
                     + src/Board.tsx (export "./board", web only) + test/
@@ -103,4 +105,5 @@ non-trivial design choice, and amend `docs/SPEC.md` with a pointer when an ADR c
   two-button flow (Register / Sign in).
 - 2026-11-14: Production domain is **coinclash.vip** (passkey rpId `coinclash.vip`). Database is
   **MongoDB Atlas**; tests still use mongodb-memory-server.
+- 2026-11-14: Server core design (ADR 0007). Instant payout mode is **proposed**, not built (ADR 0008).
 - Future work (don't build): encrypt HTLC preimages at rest; one-button passkey flow.
