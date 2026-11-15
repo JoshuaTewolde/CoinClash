@@ -332,4 +332,5 @@ export class MockEscrow implements EscrowRail {
     this.network.send(this.id, to, amount, idempotencyKey);
   paymentStatus = async (idempotencyKey: string) =>
     this.network.keyedStatus(this.id, idempotencyKey);
+  balance = async () => this.network.balanceOf(this.id);
 }

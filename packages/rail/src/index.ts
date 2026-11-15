@@ -95,6 +95,8 @@ export interface EscrowRail {
    * restarts. Resolves with the payment id; rejects if the payment failed.
    */
   pay(to: string, amount: Sats, idempotencyKey: string): Promise<{ paymentId: string }>;
+  /** Sats the escrow wallet holds right now (public escrow page, ADR 0018). */
+  balance(): Promise<Sats>;
   /** Did the payment with this logical key already go out? (reconcile after a crash) */
   paymentStatus(idempotencyKey: string): Promise<'completed' | 'pending' | 'failed' | null>;
 }

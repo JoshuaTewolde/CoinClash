@@ -29,6 +29,8 @@ export interface MatchRepo {
   getByInvoice(invoice: string): Promise<MatchDoc | null>;
   /** Matches (any status) with escrow payouts or refunds not yet paid. */
   listOpenPayouts(): Promise<MatchDoc[]>;
+  /** Most recently settled escrow matches, newest first (public escrow page). */
+  listRecentSettled(limit: number): Promise<MatchDoc[]>;
 }
 
 export interface UserRepo {
@@ -77,6 +79,13 @@ export class MemoryMatchRepo implements MatchRepo {
   }
   async listOpenPayouts() {
     return [...this.docs.values()].filter((d) => d.payoutsOpen).map((d) => structuredClone(d));
+  }
+  async listRecentSettled(limit: number) {
+    return [...this.docs.values()]
+      .filter((d) => d.status === 'SETTLED' && d.mode === 'escrow')
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, limit)
+      .map((d) => structuredClone(d));
   }
   async listUnfinished() {
     return [...this.docs.values()]

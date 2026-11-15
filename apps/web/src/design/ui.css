@@ -828,6 +828,15 @@ a.card {
   font-size: var(--cc-text-sm);
 }
 
+.secured {
+  color: inherit;
+  text-decoration: none;
+}
+
+.secured__more {
+  font-weight: 800;
+}
+
 .secured__by {
   color: var(--cc-ink-soft);
   font-weight: 500;

@@ -140,6 +140,10 @@ export function breezEscrow(sdk: BreezSdk): EscrowRail {
         if (id) void sdk.removeEventListener(id);
       };
     },
+    async balance() {
+      const info = await sdk.getInfo({ ensureSynced: false });
+      return Number(info.balanceSats);
+    },
     async pay(to, amount, idempotencyKey) {
       await ensureSynced();
       let prepareResponse = await sdk.prepareSendPayment({

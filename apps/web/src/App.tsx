@@ -11,6 +11,7 @@ import { Match } from './screens/match/Match';
 import { NewChallenge } from './screens/NewChallenge';
 import { Onboarding } from './screens/Onboarding';
 import { Practice } from './screens/Practice';
+import { Escrow } from './screens/Escrow';
 import { Settings } from './screens/Settings';
 import { Wallet } from './screens/Wallet';
 import './design/ui.css';
@@ -33,6 +34,8 @@ function Shell() {
         <Route path="/i/:code" element={<Invite />} />
       </Routes>
     );
+  } else if (pathname === '/escrow') {
+    body = <Escrow />;
   } else if (pathname.startsWith('/practice')) {
     // Practice needs no account or wallet (ADR 0017).
     body = (

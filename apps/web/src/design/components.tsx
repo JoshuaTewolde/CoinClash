@@ -311,9 +311,14 @@ export function ClockIcon() {
 }
 
 /** Trust mark for escrowed stakes (ADR 0013). */
+/** "Secured by CoinClash": links to the public escrow page (ADR 0018). */
 export function SecuredBadge() {
   return (
-    <span className="secured" role="note">
+    <Link
+      to="/escrow"
+      className="secured"
+      aria-label="Secured by CoinClash, powered by Breez. See the escrow"
+    >
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
         <path
           d="M12 2.5l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6z"
@@ -334,8 +339,12 @@ export function SecuredBadge() {
       <span>
         <strong>Secured by CoinClash</strong>
         <span className="secured__by"> · powered by Breez</span>
+        <span className="secured__more" aria-hidden="true">
+          {' '}
+          ›
+        </span>
       </span>
-    </span>
+    </Link>
   );
 }
 

@@ -226,6 +226,25 @@ export interface ActivityItem {
   readonly status: 'pending' | 'done' | 'failed';
 }
 
+/** Public proof that the escrow holds what it owes (`GET /api/escrow`, ADR 0018). */
+export interface EscrowReport {
+  /** Sats in the escrow wallet now. */
+  readonly balance: number;
+  /** Sats the escrow owes: paid-in stakes of live matches plus unpaid payouts and refunds. */
+  readonly owed: number;
+  /** Matches whose stakes are held right now. */
+  readonly liveMatches: number;
+  /** Recent payouts and refunds, anonymous. */
+  readonly recent: readonly {
+    readonly at: number;
+    readonly gameId: string;
+    readonly kind: 'payout' | 'refund';
+    readonly amount: number;
+  }[];
+  /** Unix ms the report was made. */
+  readonly at: number;
+}
+
 /** Public invite preview (`GET /api/invites/:code`). */
 export interface InvitePreview {
   readonly gameId: string;

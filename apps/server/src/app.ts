@@ -8,6 +8,7 @@ import {
   LoginRequestSchema,
   type Ack,
   type ClientCommandName,
+  type EscrowReport,
   type InvitePreview,
   type PublicConfig,
   type ServerEvents,
@@ -30,6 +31,7 @@ import {
   type UserRepo,
 } from './db/repos.js';
 import { noopNotifier, webPushNotifier } from './push.js';
+import { escrowReport } from './reserves.js';
 import { games as defaultGames } from './games.js';
 import { MatchError } from './match/machine.js';
 import { MatchService } from './match/service.js';
@@ -244,6 +246,31 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
     } catch (err) {
       res.status(404).json({ ok: false, error: userMessage(err) });
     }
+  });
+
+  /** Public escrow report (ADR 0018): balance vs. what is owed. Cached briefly. */
+  let escrowCache: { at: number; body: EscrowReport } | null = null;
+  app.get('/api/escrow', async (_req, res) => {
+    if (!escrow) return res.status(404).json({ ok: false, error: 'No escrow on this server' });
+    const now = clock();
+    if (!escrowCache || now - escrowCache.at > 15_000) {
+      try {
+        const [unfinished, open, settled, balance] = await Promise.all([
+          matches.listUnfinished(),
+          matches.listOpenPayouts(),
+          matches.listRecentSettled(20),
+          escrow.balance(),
+        ]);
+        escrowCache = {
+          at: now,
+          body: escrowReport([...unfinished, ...open], settled, balance, now),
+        };
+      } catch (err) {
+        console.error('[coinclash] escrow report failed', err);
+        return res.status(503).json({ ok: false, error: 'Escrow wallet unavailable' });
+      }
+    }
+    res.json(escrowCache.body);
   });
 
   /** Wallet history with names and games (#7). */
