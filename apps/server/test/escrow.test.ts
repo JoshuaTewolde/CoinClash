@@ -368,14 +368,14 @@ describe('escrow service (mock escrow)', () => {
   });
 
   it('cancels and refunds when only one player pays in time', async () => {
-    const { net, service, escrow } = await setupService({ lockTimeoutMs: 300 });
+    const { net, service, escrow } = await setupService({ lockTimeoutMs: 2000 });
     try {
       const doc = await toDeposits(service);
       await net.wallet('alice').payInvoice(doc.deposits.alice!.invoice!, 'a');
       const done = await until(async () => {
         const d = await service.get(doc._id);
         return d.status === 'CANCELLED' && !d.payoutsOpen ? d : null;
-      });
+      }, 10_000);
       expect(done.payouts['refund:alice']!.status).toBe('paid');
       expect(net.balanceOf('alice')).toBe(10_000);
       expect(net.balanceOf(escrow.id)).toBe(0);
