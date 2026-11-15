@@ -5,9 +5,10 @@
  * passkey wallet can't be reopened without a tap.
  */
 import { NicknameSchema } from '@coinclash/shared';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card, ErrorText, Logo } from '../design/components';
+import { browserSupport, supportAdvice, type BrowserSupport } from '../lib/browserSupport';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
 
 export function AuthForm({ children }: { children?: ReactNode }) {
@@ -97,6 +98,36 @@ export function AuthForm({ children }: { children?: ReactNode }) {
   );
 }
 
+/** Warns up front when this browser can't hold a passkey wallet, with a copy-link escape. */
+export function BrowserWarning() {
+  const { config } = useSnapshot();
+  const [support, setSupport] = useState<BrowserSupport>('unknown');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void browserSupport().then((s) => live && setSupport(s));
+    return () => {
+      live = false;
+    };
+  }, []);
+  const advice = config?.network === 'mock' ? null : supportAdvice(support);
+  if (!advice) return null;
+  const copy = () => {
+    void navigator.clipboard?.writeText(window.location.href).then(
+      () => setCopied(true),
+      () => undefined,
+    );
+  };
+  return (
+    <Card tone="paper" raised aria-label="Browser not supported">
+      <strong>Open CoinClash in Chrome</strong>
+      <span>{advice}</span>
+      <Button onClick={copy}>{copied ? 'Link copied' : 'Copy link'}</Button>
+      <span className="muted">You can still try a free practice game here.</span>
+    </Card>
+  );
+}
+
 export function Onboarding() {
   const { returning } = useSnapshot();
   return (
@@ -112,6 +143,7 @@ export function Onboarding() {
           </p>
         </Card>
       )}
+      <BrowserWarning />
       <AuthForm />
       <Link to="/practice" className="btn btn--block">
         Try a free practice game first

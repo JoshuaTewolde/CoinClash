@@ -256,7 +256,9 @@ export function passkeyIdentity(opts: PasskeyIdentityOptions): IdentityProvider 
       .build();
     const availability = await client.checkAvailability();
     if (availability.type === 'prfUnsupported') {
-      throw new Error('This browser can’t unlock a passkey wallet. Please use Chrome.');
+      throw new Error(
+        'This browser can’t unlock a passkey wallet. Use Chrome, or Safari on iPhone (iOS 18+).',
+      );
     }
     if (availability.type === 'notAssociated') {
       throw new Error(`Passkeys aren’t set up for this site (${availability.reason}).`);

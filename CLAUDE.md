@@ -128,4 +128,7 @@ non-trivial design choice, and amend `docs/SPEC.md` with a pointer when an ADR c
   PasskeyClientBuilder; UUID idempotency keys (ADR 0012).
 - 2026-11-15: Web app architecture: one store, one route per match, MatchAgent, mock wallet over
   HTTP in NETWORK=mock only (ADR 0011).
+- 2026-11-15: Polish for judging: free practice vs CoinBot, no account (ADR 0017); public escrow
+  page `/escrow`, held vs owed (ADR 0018); haptics/sound cues (ADR 0019); browser support check
+  before the passkey prompt (ADR 0020). Head-to-head net sats on friend tiles.
 - Future work (don't build): encrypt HTLC preimages at rest; one-button passkey flow.
