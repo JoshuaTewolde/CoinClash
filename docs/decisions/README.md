@@ -20,6 +20,7 @@ the spec carries an amendment note that points here.
 | 0011 | [Web app architecture (Phase 4)](0011-web-app-architecture.md)                                                    | Accepted                     |
 | 0012 | [Breez integration: house wallet, passkeys, HTLC calls (Phase 5)](0012-breez-integration.md)                      | Accepted                     |
 | 0013 | [Custodial escrow is the active mode; HTLC oracle dormant](0013-custodial-escrow-active.md)                       | Accepted                     |
+| 0014 | [Connect 4, RPS, Trivia, Pool (and spec deviations)](0014-extra-games.md)                                         | Accepted                     |
 
 Template: **Context** (why we had to decide) → **Decision** → **Alternatives considered** →
 **Consequences / trade-offs** → **Open questions**.

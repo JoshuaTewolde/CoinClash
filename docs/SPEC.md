@@ -9,6 +9,7 @@
 
 These override the sections below. Rationale lives in `docs/decisions/`.
 
+- **2026-11-15, [ADR 0014](decisions/0014-extra-games.md):** all five games shipped. §4 deviations: RPS can draw only after a 9-round cap; Trivia has 5 questions × 20 s from a bundled bank with no speed bonus; Pool rules are simplified further.
 - **2026-11-15, [ADR 0013](decisions/0013-custodial-escrow-active.md):** direct Spark HTLCs between user wallets are disabled network-side (breez/spark-sdk#1123). **Active mode is custodial escrow:** both stakes are paid into a server escrow wallet, and the winner is paid the whole pot instantly. The ADR 0002 HTLC mode stays in the code, dormant (`ESCROW_MODE=htlc`).
 - **2026-11-14, [ADR 0002](decisions/0002-htlc-oracle-escrow.md):** §6 is replaced. There is **one payment mode, Secure**, implemented as **HTLC "oracle" escrow**. Players cross-lock Spark HTLCs to each other, and the server only releases the winner's secret code. The server never holds match funds. **Trusted Friend mode, server-held escrow, external-wallet deposits and the debts system are removed.** This affects §1, §5, §6, §7, §8, §11 and §12 as described in the ADR.
 - **2026-11-14, [ADR 0003](decisions/0003-chrome-only-passkeys.md):** Chrome only for now, two-button passkey flow (Create account / Sign in).
