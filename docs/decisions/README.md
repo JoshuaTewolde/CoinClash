@@ -22,6 +22,7 @@ the spec carries an amendment note that points here.
 | 0013 | [Custodial escrow is the active mode; HTLC oracle dormant](0013-custodial-escrow-active.md)                       | Accepted                     |
 | 0014 | [Connect 4, RPS, Trivia, Pool (and spec deviations)](0014-extra-games.md)                                         | Accepted                     |
 | 0015 | [Stay signed in on a device (with an opt-out)](0015-stay-signed-in.md)                                            | Accepted                     |
+| 0016 | [Challenge friends directly, push notifications, join codes and QR](0016-friends-push-join-codes.md)              | Accepted                     |
 
 Template: **Context** (why we had to decide) → **Decision** → **Alternatives considered** →
 **Consequences / trade-offs** → **Open questions**.
