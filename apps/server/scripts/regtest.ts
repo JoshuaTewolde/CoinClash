@@ -18,7 +18,7 @@ import type { BreezSdk, Payment } from '@breeztech/breez-sdk-spark/nodejs';
 import { idempotencyUuid, paymentHashOf } from '@coinclash/rail';
 import { generateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
-import { breezHouseWallet, connectBreez } from '../src/breez.js';
+import { breezEscrow, breezHouseWallet, connectBreez } from '../src/breez.js';
 
 const FAUCET_URL = process.env.FAUCET_URL ?? 'https://api.lightspark.com/graphql/spark/rc';
 const STAKE = 1_000;
@@ -155,7 +155,65 @@ async function main() {
       return;
     }
 
-    case 'smoke': {
+    case 'smoke':
+    case 'escrow-smoke': {
+      // ADR 0013: escrow invoice → player pays → escrow detects it → escrow pays back.
+      const a = await wallet('REGTEST_PLAYER_A_MNEMONIC');
+      const escrowSdk = await wallet('ESCROW_MNEMONIC');
+      const escrow = breezEscrow(escrowSdk);
+      const identityA = (await a.getInfo({ ensureSynced: false })).identityPubkey;
+      const addrA = await sparkAddress(a);
+      if ((await balance(a)) < STAKE * 2) {
+        console.log('Player A is short; topping up from the house wallet');
+        const house = await wallet('HOUSE_MNEMONIC');
+        await breezHouseWallet(house).pay(addrA, STAKE * 5, `smoke-topup:${Date.now()}`);
+        await waitFor('top-up', async () => ((await balance(a)) >= STAKE * 2 ? true : null));
+        await house.disconnect();
+      }
+      const [a0, e0] = [await balance(a), await balance(escrowSdk)];
+      const run = randomBytes(4).toString('hex');
+      const invoice = await escrow.createInvoice({
+        amount: STAKE,
+        expiresAt: Math.floor(Date.now() / 1000) + 600,
+        payerIdentity: identityA,
+        memo: `CoinClash smoke ${run}`,
+      });
+      console.log('escrow invoice issued');
+      const seen: string[] = [];
+      const unsubscribe = escrow.onInvoicePaid((p) => seen.push(p.invoice));
+      const prepareResponse = await a.prepareSendPayment({
+        paymentRequest: { type: 'input', input: invoice },
+      });
+      const { payment } = await a.sendPayment({
+        prepareResponse,
+        idempotencyKey: idempotencyUuid(`smoke-deposit:${run}`),
+      });
+      console.log(`A paid the invoice: ${payment.id} ${payment.status}`);
+      const found = await waitFor('the escrow to see the deposit', () =>
+        escrow.findInvoicePayment(invoice),
+      );
+      console.log('escrow found deposit:', found, '| event seen:', seen.includes(invoice));
+      if (found.amount !== STAKE) throw new Error(`wrong amount ${found.amount}`);
+      const key = `payout:smoke-${run}:A`;
+      const out = await escrow.pay(addrA, STAKE, key);
+      console.log(`escrow paid back: ${out.paymentId}`);
+      if ((await escrow.pay(addrA, STAKE, key)).paymentId !== out.paymentId) {
+        throw new Error('idempotent payout returned a different payment');
+      }
+      console.log('payout status by key:', await escrow.paymentStatus(key));
+      const a1 = await waitFor('A balance restored', async () => {
+        const v = await balance(a);
+        return v >= a0 ? v : null;
+      });
+      console.log({ a0, a1, e0, e1: await balance(escrowSdk) });
+      unsubscribe();
+      console.log('regtest escrow smoke test passed ✓');
+      await Promise.all([a.disconnect(), escrowSdk.disconnect()]);
+      return;
+    }
+
+    case 'htlc-smoke': {
+      // ADR 0002 (dormant): blocked network-side by breez/spark-sdk#1123 (PermissionDenied).
       const a = await wallet('REGTEST_PLAYER_A_MNEMONIC');
       const b = await wallet('REGTEST_PLAYER_B_MNEMONIC');
       const [addrA, addrB] = [await sparkAddress(a), await sparkAddress(b)];
@@ -209,7 +267,7 @@ async function main() {
     }
 
     default:
-      console.log('usage: regtest <mnemonic|info|fund|smoke> …');
+      console.log('usage: regtest <mnemonic|info|fund|smoke|escrow-smoke|htlc-smoke> …');
       process.exitCode = 1;
   }
 }

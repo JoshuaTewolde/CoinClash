@@ -47,8 +47,10 @@ consume it directly, and the server's tsup build bundles it. There are no per-pa
 - **Server is the only source of truth.** Clients send intents; the server validates and applies them, then broadcasts `viewFor()`.
 - Game engines are pure and deterministic (seeded RNG only). There is no game code in payment logic and no payment code in games.
 - All money movement goes through the `PaymentRail` interface (`mock` | `regtest` | `mainnet`).
-  Game and match code never import the Breez SDK directly. The **server never holds match
-  funds**: it is only the result oracle that releases HTLC secret codes (ADR 0002).
+  Game and match code never import the Breez SDK directly. **Active mode is custodial escrow**
+  (ADR 0013): players pay a per-player Spark invoice from the server escrow wallet, and the winner
+  is paid instantly with idempotent, reconciled payouts. The HTLC oracle (ADR 0002) is dormant
+  (`ESCROW_MODE=htlc`) because direct Spark HTLCs are disabled (breez/spark-sdk#1123).
 - `NETWORK=mock` is for tests, CI and offline UI dev only. It is **never** exposed to players.
 - Conventional Commits (`feat:`, `fix:`, `test:`, `ci:`, `docs:`, `chore:`), one logical change
   per commit.
@@ -97,7 +99,8 @@ waitingForPreimage | preimageShared | returned }`. Claim with `claimHtlcPayment(
 
 Never commit secrets: no seeds, mnemonics, API keys or `.env` files. gitleaks runs in CI.
 `.env.example` documents every variable. `VITE_*` values are **public** (baked into the bundle).
-`HOUSE_MNEMONIC` (regtest welcome-bonus wallet) and the server `BREEZ_API_KEY` live only on the server and in GitHub secrets.
+`HOUSE_MNEMONIC` (regtest welcome-bonus wallet), `ESCROW_MNEMONIC` (match escrow) and the server
+`BREEZ_API_KEY` live only on the server and in GitHub secrets.
 
 GitHub Actions secrets (create when needed):
 `BREEZ_API_KEY`, `REGTEST_HOUSE_MNEMONIC`, `REGTEST_PLAYER_A_MNEMONIC`, `REGTEST_PLAYER_B_MNEMONIC`
@@ -119,6 +122,8 @@ non-trivial design choice, and amend `docs/SPEC.md` with a pointer when an ADR c
 - 2026-11-14: Production domain is **coinclash.vip** (passkey rpId `coinclash.vip`). Database is
   **MongoDB Atlas**; tests still use mongodb-memory-server.
 - 2026-11-14: Server core design (ADR 0007). Instant payout mode accepted, built as Phase 5b (ADR 0008). Players pick the network; test only for now (ADR 0010). Server provisioned (ADR 0004).
+- 2026-11-15: **Custodial escrow active, HTLC dormant** (ADR 0013). UI: "Secured by CoinClash ·
+  powered by Breez".
 - 2026-11-15: Breez integration: house wallet = signature verifier + welcome bonus; passkeys via
   PasskeyClientBuilder; UUID idempotency keys (ADR 0012).
 - 2026-11-15: Web app architecture: one store, one route per match, MatchAgent, mock wallet over
