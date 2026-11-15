@@ -70,5 +70,7 @@ export function viewFor(
     opponentGraceEndsAt: opp ? (doc.graceEndsAt[opp] ?? null) : null,
     rematchOf: doc.rematchOf,
     rematchId: doc.rematchId,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
   };
 }

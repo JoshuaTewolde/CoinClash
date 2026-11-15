@@ -219,6 +219,19 @@ describe('full match over sockets with mock wallets and MongoDB', () => {
         await fetch(`${baseUrl}/api/me`, { headers: { authorization: `Bearer ${token}` } })
       ).json();
       expect(me).toEqual({ id: winner.id, nickname: winner === alice ? 'Alice' : 'Bob' });
+      const friends = await json<{ nickname: string; gamesPlayed: number; streakDays: number }[]>(
+        fetch(`${baseUrl}/api/friends?tzOffset=0`, {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(friends).toEqual([
+        expect.objectContaining({
+          nickname: winner === alice ? 'Bob' : 'Alice',
+          gamesPlayed: 1,
+          streakDays: 1,
+          record: { wins: 1, losses: 0, draws: 0 },
+        }),
+      ]);
       const rematch = await loser.send('match:rematch', { matchId: created.id });
       expect(rematch).toMatchObject({ status: 'NEGOTIATING', stake: 1000, rematchOf: created.id });
     } finally {

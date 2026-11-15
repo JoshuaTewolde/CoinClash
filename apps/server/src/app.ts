@@ -7,6 +7,8 @@ import {
   LoginRequestSchema,
   type Ack,
   type ClientCommandName,
+  type InvitePreview,
+  type PublicConfig,
   type ServerEvents,
 } from '@coinclash/shared';
 import express, { type NextFunction, type Request, type Response } from 'express';
@@ -14,6 +16,8 @@ import { Server as SocketServer, type Socket } from 'socket.io';
 import { ZodError, type z } from 'zod';
 import { Auth, AuthError } from './auth.js';
 import type { ServerConfig } from './config.js';
+import { friendStats } from './friends.js';
+import { mockWalletRouter } from './mockWallet.js';
 import { MemoryMatchRepo, MemoryUserRepo, type MatchRepo, type UserRepo } from './db/repos.js';
 import { games as defaultGames } from './games.js';
 import { MatchError } from './match/machine.js';
@@ -113,13 +117,24 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
   });
 
   app.get('/api/config', (_req, res) => {
-    res.json({
+    const body: PublicConfig = {
       network: config.NETWORK,
+      networks: [config.NETWORK],
       stakeMin: config.STAKE_MIN_SATS,
       stakeMax: config.STAKE_MAX_SATS,
       games: [...plugins.values()].map((g) => ({ id: g.id, name: g.name, turnModel: g.turnModel })),
-    });
+    };
+    res.json(body);
   });
+
+  // Shared in-memory Spark network for browsers. NETWORK=mock ONLY (ADR 0011).
+  if (config.NETWORK === 'mock') {
+    const { router } = mockWalletRouter({
+      welcomeSats: config.WELCOME_BONUS_SATS,
+      now: () => Math.floor(clock() / 1000),
+    });
+    app.use('/api/mock-wallet', router);
+  }
 
   app.post('/api/auth/nonce', (_req, res) => {
     res.json({ nonce: auth.issueNonce() });
@@ -146,18 +161,29 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
     res.json(await Promise.all(docs.map((d) => service.view(d, me))));
   });
 
+  app.get('/api/friends', requireUser, async (req, res) => {
+    const me = res.locals.userId as string;
+    const tz = Number(req.query.tzOffset ?? 0);
+    const tzOffset = Number.isFinite(tz) && Math.abs(tz) <= 14 * 60 ? tz : 0;
+    const docs = await matches.listForPlayer(me, 500);
+    const ids = new Set(docs.flatMap((d) => [d.challenger, d.opponent ?? '']).filter(Boolean));
+    const nicknames = new Map((await users.getMany([...ids])).map((u) => [u._id, u.nickname]));
+    res.json(friendStats(docs, me, nicknames, clock(), tzOffset));
+  });
+
   /** Public invite preview for the challenge card before sign-in. No secrets, no ids. */
   app.get('/api/invites/:code', async (req, res) => {
     const doc = await matches.getByInvite(req.params.code);
     if (!doc) return void res.status(404).json({ ok: false, error: 'Invite not found' });
     const challenger = await users.get(doc.challenger);
-    res.json({
+    const body: InvitePreview = {
       gameId: doc.gameId,
       gameName: plugins.get(doc.gameId)?.name ?? doc.gameId,
       stake: doc.stake,
       status: doc.status,
       challenger: challenger?.nickname ?? 'A friend',
-    });
+    };
+    res.json(body);
   });
 
   // ---------- Socket.IO ----------

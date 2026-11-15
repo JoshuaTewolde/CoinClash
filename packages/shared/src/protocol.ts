@@ -3,6 +3,7 @@
  * schemas at the boundary (CLAUDE.md conventions). Match lifecycle: ADR 0002.
  */
 import { z } from 'zod';
+import type { Network } from './network.js';
 
 export const MATCH_STATUSES = [
   'PROPOSED', // created by the challenger, nobody has opened the invite yet
@@ -143,6 +144,50 @@ export interface MatchView {
   readonly opponentGraceEndsAt: number | null;
   readonly rematchOf: string | null;
   readonly rematchId: string | null;
+  /** Unix ms. */
+  readonly createdAt: number;
+  /** Unix ms. */
+  readonly updatedAt: number;
+}
+
+/** Win/loss/draw counts. */
+export interface Record3 {
+  readonly wins: number;
+  readonly losses: number;
+  readonly draws: number;
+}
+
+/** Head-to-head stats with one friend, from finished matches (ADR 0009). */
+export interface FriendStats {
+  readonly id: string;
+  readonly nickname: string;
+  /** Consecutive local days with a finished match, ending today or yesterday. */
+  readonly streakDays: number;
+  readonly gamesPlayed: number;
+  /** Unix ms of the most recent finished match. */
+  readonly lastPlayedAt: number;
+  readonly record: Record3;
+  readonly byGame: Readonly<Record<string, Record3>>;
+}
+
+/** Public server config (`GET /api/config`). */
+export interface PublicConfig {
+  /** Network this server runs matches on. */
+  readonly network: Network;
+  /** Networks a player may pick (ADR 0010). Only `network` for now. */
+  readonly networks: readonly Network[];
+  readonly stakeMin: number;
+  readonly stakeMax: number;
+  readonly games: readonly { id: string; name: string; turnModel: string }[];
+}
+
+/** Public invite preview (`GET /api/invites/:code`). */
+export interface InvitePreview {
+  readonly gameId: string;
+  readonly gameName: string;
+  readonly stake: number;
+  readonly status: MatchStatus;
+  readonly challenger: string;
 }
 
 export interface CodeRelease {

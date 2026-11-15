@@ -24,7 +24,12 @@ describe('server basics', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, network: 'mock' });
     const cfg = (await (await fetch(`${baseUrl}/api/config`)).json()) as { games: unknown };
-    expect(cfg).toMatchObject({ network: 'mock', stakeMin: 100, stakeMax: 100000 });
+    expect(cfg).toMatchObject({
+      network: 'mock',
+      networks: ['mock'],
+      stakeMin: 100,
+      stakeMax: 100000,
+    });
     expect(cfg.games).toEqual([{ id: 'tictactoe', name: 'Tic-tac-toe', turnModel: 'alternating' }]);
   });
 

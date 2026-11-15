@@ -22,6 +22,7 @@ const ConfigSchema = z
     LOCK_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(180),
     CLAIM_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
     DISCONNECT_GRACE_SECONDS: z.coerce.number().int().positive().default(60),
+    WELCOME_BONUS_SATS: z.coerce.number().int().min(0).default(10_000),
   })
   .transform((c, ctx) => {
     let secret = c.SESSION_SECRET;
