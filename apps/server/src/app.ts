@@ -1,4 +1,5 @@
 import { createServer, type Server as HttpServer } from 'node:http';
+import { join } from 'node:path';
 import type { AnyGamePlugin } from '@coinclash/game-sdk';
 import type { SignatureVerifier } from '@coinclash/rail';
 import { mockVerifier } from '@coinclash/rail/mock';
@@ -194,6 +195,21 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
     };
     res.json(body);
   });
+
+  // ---------- Web app (production image) ----------
+  if (config.WEB_DIST_DIR) {
+    const dist = config.WEB_DIST_DIR;
+    // Hashed assets never change; index.html must always be fresh.
+    app.use(
+      '/assets',
+      express.static(join(dist, 'assets'), { immutable: true, maxAge: '365d', fallthrough: false }),
+    );
+    app.use(express.static(dist, { index: false, maxAge: '1h' }));
+    app.get(/^\/(?!api\/|socket\.io\/|health$).*/, (_req, res) => {
+      res.setHeader('cache-control', 'no-cache');
+      res.sendFile(join(dist, 'index.html'));
+    });
+  }
 
   // ---------- Socket.IO ----------
   const presence = new Map<string, number>();

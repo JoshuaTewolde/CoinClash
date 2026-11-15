@@ -32,6 +32,8 @@ const ConfigSchema = z
     BREEZ_API_KEY: z.string().optional(),
     HOUSE_MNEMONIC: z.string().optional(),
     BREEZ_STORAGE_DIR: z.string().min(1).default('./.data/breez-server'),
+    /** Built web app (apps/web/dist). When set, the server also serves it (production image). */
+    WEB_DIST_DIR: z.string().optional(),
   })
   .transform((c, ctx) => {
     let secret = c.SESSION_SECRET;
