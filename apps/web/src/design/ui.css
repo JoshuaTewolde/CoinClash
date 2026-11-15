@@ -742,6 +742,19 @@ a.card {
   background: var(--cc-sunflower);
 }
 
+/* ---------- secured badge ---------- */
+.secured {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  font-size: var(--cc-text-sm);
+}
+
+.secured__by {
+  color: var(--cc-ink-soft);
+  font-weight: 500;
+}
+
 /* ---------- toast ---------- */
 .toast {
   position: fixed;

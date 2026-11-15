@@ -22,6 +22,8 @@ function view(you: 'alice' | 'bob', over: Partial<MatchView> = {}): MatchView {
     opponent: { id: 'bob', nickname: 'Bob' },
     you,
     respondent: null,
+    mode: 'htlc',
+    escrow: null,
     locks: {
       lockToHash: hashes[opp],
       incomingHash: hashes[you],
@@ -153,5 +155,49 @@ describe('MatchAgent', () => {
     await agent.onCode({ matchId: 'm1', preimage: P_ALICE, paymentHash: paymentHashOf(P_ALICE) });
     expect(onError).toHaveBeenCalled();
     expect(sent).toHaveLength(0);
+  });
+
+  it('pays the escrow deposit once with a stable key and nudges the server', async () => {
+    const { MockEscrow } = await import('@coinclash/rail/mock');
+    const net = new MockNetwork(() => T);
+    const escrow = new MockEscrow(net);
+    const wallet = net.wallet('alice', 5000);
+    const sent: string[] = [];
+    const agent = new MatchAgent({
+      wallet,
+      send: async (event) => {
+        sent.push(event);
+      },
+      nowSec: () => T,
+    });
+    const invoice = await escrow.createInvoice({
+      amount: 1000,
+      expiresAt: T + 600,
+      payerIdentity: 'alice',
+      memo: 'm',
+    });
+    const v = view('alice', {
+      status: 'AWAITING_DEPOSITS',
+      mode: 'escrow',
+      locks: null,
+      escrow: {
+        deadline: (T + 180) * 1000,
+        paid: { alice: false, bob: false },
+        yourInvoice: invoice,
+        payouts: [],
+      },
+    });
+    await agent.payDeposit(v);
+    await agent.payDeposit(v); // idempotent: same key, paid once
+    expect(net.balanceOf('alice')).toBe(4000);
+    expect(net.balanceOf(escrow.id)).toBe(1000);
+    expect(sent).toContain('match:paid');
+    await agent.payDeposit({ ...v, escrow: { ...v.escrow!, paid: { alice: true, bob: false } } });
+    await expect(agent.payDeposit({ ...v, status: 'IN_PROGRESS' })).rejects.toThrow(
+      /Nothing to pay/,
+    );
+    await expect(
+      agent.payDeposit({ ...v, escrow: { ...v.escrow!, yourInvoice: null } }),
+    ).rejects.toThrow(/ready/);
   });
 });

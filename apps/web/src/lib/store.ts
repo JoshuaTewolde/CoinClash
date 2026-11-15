@@ -326,6 +326,14 @@ export class Store {
     return v;
   }
 
+  /** Escrow mode: pay my stake into escrow (one tap). */
+  async payStake(view: MatchView): Promise<void> {
+    if (!this.agent) throw new Error('Not signed in');
+    await this.agent.payDeposit(view);
+    await this.refreshBalance();
+  }
+
+  /** HTLC mode (dormant). */
   async lock(view: MatchView): Promise<void> {
     if (!this.agent) throw new Error('Not signed in');
     await this.agent.lock(view);

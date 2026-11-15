@@ -8,6 +8,7 @@ import { Ended } from './Ended';
 import { GameStage } from './GameStage';
 import { InviteSent } from './InviteSent';
 import { LockStake } from './LockStake';
+import { PayStake } from './PayStake';
 import { Negotiate } from './Negotiate';
 import { Result } from './Result';
 
@@ -43,7 +44,10 @@ function Stage({ view }: { view: MatchView }) {
       return <InviteSent view={view} />;
     case 'NEGOTIATING':
       return <Negotiate view={view} />;
+    case 'AWAITING_DEPOSITS':
+      return <PayStake view={view} />;
     case 'AWAITING_LOCKS':
+      // HTLC mode is dormant (ADR 0013); kept so it can be switched back on.
       return <LockStake view={view} />;
     case 'IN_PROGRESS':
       return <GameStage view={view} />;

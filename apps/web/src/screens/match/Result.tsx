@@ -11,6 +11,7 @@ import {
   CoinBurst,
   ErrorText,
   formatTimeOfDay,
+  SecuredBadge,
 } from '../../design/components';
 import { gameMeta } from '../../games/registry';
 import { useSnapshot, useStoreApi } from '../../lib/StoreContext';
@@ -34,7 +35,12 @@ export function Result({ view }: { view: MatchView }) {
   const meta = gameMeta(view.gameId);
   const result = view.game?.result;
   const reason = result && result.status !== 'ongoing' ? REASONS[result.reason] : undefined;
-  const claimed = view.you !== null && view.claimedBy.includes(view.you);
+  const escrow = view.mode === 'escrow' ? view.escrow : null;
+  const myPayout = escrow?.payouts.find((p) => p.player === view.you && p.kind === 'payout');
+  // Escrow: paid when the payout to me landed. HTLC (dormant): when I confirmed my claim.
+  const claimed = escrow
+    ? myPayout?.status === 'paid'
+    : view.you !== null && view.claimedBy.includes(view.you);
   const ownBack = view.locks ? formatTimeOfDay(view.locks.htlcExpiresAt * 1000) : null;
   const Board = meta.Board;
 
@@ -83,7 +89,17 @@ export function Result({ view }: { view: MatchView }) {
 
       <Card aria-label="Payout">
         <span className="eyebrow">Payout</span>
-        {o === 'won' && (
+        {o === 'won' && escrow && (
+          <>
+            <strong data-testid="payout-status">
+              {claimed
+                ? `Paid +${(view.stake * 2).toLocaleString('en-US')} sats to your wallet`
+                : 'Sending the pot to your wallet…'}
+            </strong>
+            <SecuredBadge />
+          </>
+        )}
+        {o === 'won' && !escrow && (
           <>
             <strong data-testid="payout-status">
               {claimed
@@ -99,11 +115,21 @@ export function Result({ view }: { view: MatchView }) {
         )}
         {o === 'lost' && (
           <>
-            <strong data-testid="payout-status">{them} collects your stake.</strong>
+            <strong data-testid="payout-status">
+              {escrow ? `${them} takes the pot.` : `${them} collects your stake.`}
+            </strong>
             <span className="muted">Nothing else to do. Get them next time.</span>
           </>
         )}
-        {o === 'draw' && (
+        {o === 'draw' && escrow && (
+          <>
+            <strong data-testid="payout-status">
+              {claimed ? 'Your stake is back in your wallet.' : 'Returning your stake…'}
+            </strong>
+            <span className="muted">A draw: nobody wins, nobody loses.</span>
+          </>
+        )}
+        {o === 'draw' && !escrow && (
           <>
             <strong data-testid="payout-status">
               {claimed ? 'Stakes swapped back. You’re even.' : 'Swapping stakes back…'}

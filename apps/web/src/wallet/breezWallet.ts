@@ -96,6 +96,19 @@ export class BreezWallet implements AppWallet {
     return { paymentId: payment.id };
   };
 
+  /** Pay an escrow deposit invoice (ADR 0013). The amount comes from the invoice itself. */
+  payInvoice = async (invoice: string, idempotencyKey: string) => {
+    const prepareResponse = await this.sdk.prepareSendPayment({
+      paymentRequest: { type: 'input', input: invoice },
+    });
+    const { payment } = await this.sdk.sendPayment({
+      prepareResponse,
+      idempotencyKey: idempotencyUuid(idempotencyKey),
+    });
+    if (payment.status === 'failed') throw new Error('Payment failed');
+    return { paymentId: payment.id };
+  };
+
   private toIncoming(p: Payment): IncomingLock | null {
     const h = htlcOf(p);
     if (!h || p.paymentType !== 'receive') return null;

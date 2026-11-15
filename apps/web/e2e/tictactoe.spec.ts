@@ -69,9 +69,9 @@ test('full tic-tac-toe match between two phones', async ({ browser }) => {
   await expect(alice.getByText('Lower of the last two is 1,000')).toBeVisible();
   await alice.getByRole('button', { name: 'Take the lower' }).click();
 
-  // Both lock 1,000; the game starts once each wallet sees the other's lock.
+  // Both pay 1,000 into escrow; the game starts once the escrow has both stakes.
   for (const p of [alice, bob]) {
-    await p.getByRole('button', { name: 'Lock 1,000 from wallet' }).click();
+    await p.getByRole('button', { name: 'Pay 1,000 from wallet' }).click();
   }
   await expect(alice.getByRole('grid', { name: 'Tic-tac-toe board' })).toBeVisible();
   await expect(bob.getByRole('grid', { name: 'Tic-tac-toe board' })).toBeVisible();
@@ -85,12 +85,12 @@ test('full tic-tac-toe match between two phones', async ({ browser }) => {
   const second = first === alice ? bob : alice;
 
   await expect(first.getByRole('heading', { name: 'You won!' })).toBeVisible();
-  await expect(first.getByTestId('payout-status')).toHaveText(/Collected .*1,000 sats/);
+  await expect(first.getByTestId('payout-status')).toHaveText(/Paid \+2,000 sats/);
   await expect(second.getByRole('heading', { name: /won$/ })).toBeVisible();
 
-  // Balances: winner got the loser's 1,000 (own 1,000 unlocks at HTLC expiry), loser is down 1,000.
+  // Balances: the winner got the whole 2,000 pot instantly; the loser is down 1,000.
   await first.getByRole('link', { name: 'Home' }).click();
-  await expect(first.getByLabel('Your wallet')).toContainText('10,000 sats');
+  await expect(first.getByLabel('Your wallet')).toContainText('11,000 sats');
   await expect(first.getByText('1-day streak')).toBeVisible();
   await second.getByRole('button', { name: /Rematch/ }).click();
   await expect(second.getByRole('button', { name: 'Accept 1,000' })).toHaveCount(0);

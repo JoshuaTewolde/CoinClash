@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, ErrorText, ScreenHead } from '../design/components';
+import { Button, Card, ErrorText, ScreenHead, SecuredBadge } from '../design/components';
 import { GameIcon, GAMES } from '../games/registry';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
 import { clampStake, StakeInput } from './StakeInput';
@@ -74,9 +74,10 @@ export function NewChallenge() {
       </section>
 
       <Card dashed>
+        <SecuredBadge />
         <p style={{ margin: 0, fontSize: 'var(--cc-text-sm)' }}>
-          Both stakes get <strong>locked</strong> before the game starts. The winner unlocks both.
-          CoinClash never holds your sats.
+          Both stakes are <strong>secured</strong> before the game starts. The winner gets the whole
+          pot instantly.
         </p>
       </Card>
 

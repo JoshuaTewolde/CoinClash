@@ -14,6 +14,8 @@ const base: MatchView = {
   opponent: null,
   you: 'a',
   respondent: null,
+  mode: 'escrow',
+  escrow: null,
   locks: null,
   game: null,
   claimDeadline: null,

@@ -47,6 +47,35 @@ export class MatchAgent {
     }
   }
 
+  /**
+   * Escrow mode (ADR 0013): pay my deposit invoice once, then nudge the server to check. The
+   * server only starts the game after its escrow wallet sees the payment.
+   */
+  async payDeposit(view: MatchView): Promise<void> {
+    const escrow = view.escrow;
+    if (view.status !== 'AWAITING_DEPOSITS' || !escrow || !view.you) {
+      throw new Error('Nothing to pay');
+    }
+    if (escrow.paid[view.you]) return;
+    if (!escrow.yourInvoice) throw new Error('Getting your payment ready… try again in a second');
+    const key = `deposit:${view.id}`;
+    if (this.inflight.has(key)) return;
+    this.inflight.add(key);
+    try {
+      // Same key → same payment: a double tap or a retry after reload never pays twice.
+      await this.deps.wallet.payInvoice(escrow.yourInvoice, key);
+      try {
+        this.deps.memory?.setItem(memoryKey(view.id), '1');
+      } catch {
+        /* ignore */
+      }
+      await this.deps.send('match:paid', { matchId: view.id }).catch(() => undefined);
+    } finally {
+      this.inflight.delete(key);
+    }
+  }
+
+  /** HTLC mode (dormant, ADR 0002). */
   async lock(view: MatchView): Promise<void> {
     const locks = view.locks;
     if (view.status !== 'AWAITING_LOCKS' || !locks || !view.you) throw new Error('Nothing to lock');

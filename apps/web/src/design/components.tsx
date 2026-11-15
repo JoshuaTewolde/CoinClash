@@ -310,6 +310,35 @@ export function ClockIcon() {
   );
 }
 
+/** Trust mark for escrowed stakes (ADR 0013). */
+export function SecuredBadge() {
+  return (
+    <span className="secured" role="note">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M12 2.5l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6z"
+          fill="var(--cc-teal)"
+          stroke="var(--cc-ink)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M8.5 12.2l2.4 2.4 4.6-4.9"
+          fill="none"
+          stroke="var(--cc-ink)"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span>
+        <strong>Secured by CoinClash</strong>
+        <span className="secured__by"> · powered by Breez</span>
+      </span>
+    </span>
+  );
+}
+
 export function CoinBurst() {
   const coins = Array.from({ length: 12 }, (_, i) => {
     const angle = (i / 12) * Math.PI * 2;

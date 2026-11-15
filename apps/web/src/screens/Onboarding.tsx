@@ -106,8 +106,8 @@ export function Onboarding() {
       {!returning && (
         <Card tone="sun" raised>
           <p style={{ margin: 0 }}>
-            Pick a game, set a stake, send a link. You both lock your stake, the winner unlocks
-            both. CoinClash never holds your sats.
+            Pick a game, set a stake, send a link. Both stakes are secured before the game starts,
+            and the winner gets the whole pot instantly.
           </p>
         </Card>
       )}

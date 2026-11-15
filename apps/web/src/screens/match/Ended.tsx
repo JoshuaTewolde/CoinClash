@@ -8,15 +8,26 @@ export function Ended({ view }: { view: MatchView }) {
   const store = useStoreApi();
   const them = opponentName(view);
   const locked = store.hasLocked(view.id);
+  const refund = view.escrow?.payouts.find((p) => p.player === view.you && p.kind === 'refund');
   const back = view.locks ? formatTimeOfDay(view.locks.htlcExpiresAt * 1000) : null;
 
   const copy: Record<string, { title: string; body: string }> = {
     DECLINED: { title: 'Declined', body: `This challenge was declined. No sats moved.` },
     CANCELLED: {
       title: 'Cancelled',
-      body: `Both stakes weren’t locked in time, so the game never started.${
-        locked && back ? ` Your locked stake returns to your wallet automatically at ${back}.` : ''
-      }`,
+      body: view.escrow
+        ? `Both stakes weren’t paid in time, so the game never started.${
+            refund
+              ? refund.status === 'paid'
+                ? ' Your stake is back in your wallet.'
+                : ' Returning your stake to your wallet…'
+              : ''
+          }`
+        : `Both stakes weren’t locked in time, so the game never started.${
+            locked && back
+              ? ` Your locked stake returns to your wallet automatically at ${back}.`
+              : ''
+          }`,
     },
     EXPIRED: { title: 'Expired', body: 'The claim window closed.' },
     FAILED: {

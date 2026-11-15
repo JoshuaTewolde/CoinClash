@@ -47,6 +47,11 @@ export function describeMatch(v: MatchView, now: number, lockedLocally = false):
         ? { text: `Your call · ${them} offered ${last?.amount.toLocaleString('en-US')}`, hot: true }
         : { text: `Waiting for ${them} to answer`, hot: false };
     }
+    case 'AWAITING_DEPOSITS': {
+      const mine = you ? v.escrow?.paid[you] : false;
+      if (!mine && !lockedLocally) return { text: 'Pay your stake to start', hot: true };
+      return { text: `Waiting for ${them} to pay`, hot: false };
+    }
     case 'AWAITING_LOCKS': {
       const mine = you ? v.locks?.locked[you] : false;
       if (!mine && !lockedLocally) return { text: 'Lock your stake to start', hot: true };

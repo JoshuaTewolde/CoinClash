@@ -37,6 +37,8 @@ export class HttpMockWallet implements AppWallet {
   onIncomingLock = () => () => undefined;
   claim = (preimage: string) =>
     call<{ paymentId: string; amount: number }>(`${this.id}/claim`, { preimage });
+  payInvoice = (invoice: string, key: string) =>
+    call<{ paymentId: string }>(`${this.id}/pay-invoice`, { invoice, key });
   history = () => call<WalletTx[]>(`${this.id}/history`);
   faucet = async () => {
     await call(`${this.id}/faucet`, {});
