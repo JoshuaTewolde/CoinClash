@@ -6,6 +6,7 @@ import { StoreProvider, useSnapshot, useStoreApi } from './lib/StoreContext';
 import { Friend } from './screens/Friend';
 import { Home } from './screens/Home';
 import { Invite } from './screens/Invite';
+import { JoinCode } from './screens/JoinCode';
 import { Match } from './screens/match/Match';
 import { NewChallenge } from './screens/NewChallenge';
 import { Onboarding } from './screens/Onboarding';
@@ -50,6 +51,7 @@ function Shell() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/new" element={<NewChallenge />} />
+        <Route path="/join" element={<JoinCode />} />
         <Route path="/m/:id" element={<Match />} />
         <Route path="/wallet" element={<Wallet />} />
         <Route path="/settings" element={<Settings />} />

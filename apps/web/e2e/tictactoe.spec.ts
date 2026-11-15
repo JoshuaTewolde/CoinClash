@@ -100,6 +100,38 @@ test('full tic-tac-toe match between two phones', async ({ browser }) => {
   await expect(first.getByText('1-day streak')).toBeVisible();
   await second.getByRole('link', { name: 'Back home' }).click();
   await expect(second.getByLabel('Your wallet')).toContainText('9,000 sats');
+
+  // Now they're friends: the winner challenges the loser directly (no link). It shows up on the
+  // loser's Home under "Waiting on you" without opening anything.
+  const loserName = second === alice ? 'Alice' : 'Bob';
+  const winnerName = first === alice ? 'Alice' : 'Bob';
+  await first.getByRole('link', { name: /New challenge/ }).click();
+  await first.getByRole('radio', { name: loserName }).click();
+  await first.getByRole('button', { name: /Connect 4/ }).click();
+  await first.getByRole('button', { name: `Challenge ${loserName}` }).click();
+  await expect(first.getByText(`Waiting for ${loserName} to answer…`)).toBeVisible();
+  await expect(second.getByText(`${winnerName} challenged you to Connect 4`)).toBeVisible();
+  const waiting = second.getByRole('region', { name: 'Waiting on you' });
+  await expect(waiting.getByRole('link', { name: /Connect 4 vs/ })).toBeVisible();
+});
+
+test('join an open challenge with the 6-digit code', async ({ browser }) => {
+  const host = await (await browser.newContext()).newPage();
+  const guest = await (await browser.newContext()).newPage();
+  await host.goto('/');
+  await signUp(host, 'Hana');
+  await host.getByRole('link', { name: /New challenge/ }).click();
+  await host.getByRole('button', { name: 'Create challenge' }).click();
+  const code = ((await host.getByTestId('join-code').textContent()) ?? '').replace(/\D/g, '');
+  expect(code).toMatch(/^\d{6}$/);
+  await expect(host.getByRole('img', { name: 'QR code for the invite link' })).toBeVisible();
+
+  await guest.goto('/');
+  await signUp(guest, 'Gus');
+  await guest.getByRole('link', { name: 'Join with code' }).click();
+  await guest.getByLabel(/6-digit code/).fill(code);
+  await guest.getByRole('button', { name: 'Find challenge' }).click();
+  await expect(guest.getByRole('button', { name: 'Accept 2,000' })).toBeVisible();
 });
 
 test('the network picker offers real money as coming soon', async ({ page }) => {

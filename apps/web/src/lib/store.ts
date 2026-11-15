@@ -40,6 +40,7 @@ export interface Snapshot {
 
 const SESSION_KEY = 'cc.session';
 const NETWORK_KEY = 'cc.network';
+const SENDS_KEY = 'cc.sends';
 
 function load<T>(key: string): T | null {
   try {
@@ -293,6 +294,23 @@ export class Store {
     await this.refreshBalance();
   }
 
+  /** CoinClash money activity with names and games (#7). */
+  async activity() {
+    return this.token ? api.activity(this.token) : [];
+  }
+
+  async enableNotifications() {
+    if (!this.token) throw new Error('Not signed in');
+    const { enablePush } = await import('./push');
+    return enablePush(this.token);
+  }
+
+  async disableNotifications() {
+    if (!this.token) throw new Error('Not signed in');
+    const { disablePush } = await import('./push');
+    return disablePush(this.token);
+  }
+
   get hasFaucet(): boolean {
     return Boolean(this.wallet?.faucet);
   }
@@ -312,7 +330,16 @@ export class Store {
   async sendSats(destination: string, amount: number): Promise<void> {
     if (!this.wallet?.send) throw new Error('Sending isn’t available');
     await this.wallet.send(destination, amount);
+    // Remember sends made from the Wallet screen so history can label them (#7).
+    save(
+      SENDS_KEY,
+      [{ to: destination.trim(), amount, at: Date.now() }, ...this.manualSends()].slice(0, 50),
+    );
     await this.refreshBalance();
+  }
+
+  manualSends(): { to: string; amount: number; at: number }[] {
+    return load<{ to: string; amount: number; at: number }[]>(SENDS_KEY) ?? [];
   }
 
   async walletAddress(): Promise<string> {

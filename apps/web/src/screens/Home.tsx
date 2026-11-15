@@ -2,6 +2,7 @@ import type { FriendStats, MatchView } from '@coinclash/shared';
 import { Link } from 'react-router-dom';
 import { Amount, Button, ButtonLink, Card, FlameIcon, Logo, useNow } from '../design/components';
 import { NetworkPicker } from '../design/NetworkPicker';
+import { NotificationsPrompt } from '../design/NotificationsToggle';
 import { GameBadge, gameMeta } from '../games/registry';
 import { promptInstall, useCanInstall } from '../lib/install';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
@@ -48,7 +49,11 @@ export function Home() {
   const now = useNow(1000);
   const canInstall = useCanInstall();
   const all = Object.values(matches).sort((a, b) => b.updatedAt - a.updatedAt);
+  const store = useStoreApi();
   const live = all.filter((v) => !isFinal(v));
+  // Challenges and turns waiting on me go first, in their own section: no link needed (#4).
+  const forYou = live.filter((v) => describeMatch(v, now, store.hasLocked(v.id)).hot);
+  const others = live.filter((v) => !forYou.includes(v));
   const recent = all.filter(isFinal).slice(0, 5);
 
   return (
@@ -67,21 +72,41 @@ export function Home() {
         )}
       </Card>
 
+      {forYou.length > 0 && (
+        <section className="stack" aria-labelledby="foryou-h">
+          <h2 id="foryou-h" className="section-title">
+            Waiting on you
+          </h2>
+          {forYou.map((v) => (
+            <MatchRow key={v.id} v={v} now={now} />
+          ))}
+        </section>
+      )}
+
       <ButtonLink to="/new" variant="primary" size="lg" block>
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
         </svg>
         New challenge
       </ButtonLink>
+      <ButtonLink to="/join" block>
+        Join with code
+      </ButtonLink>
+
+      <NotificationsPrompt />
 
       <section className="stack" aria-labelledby="live-h">
         <h2 id="live-h" className="section-title">
           Live matches
         </h2>
-        {live.length === 0 ? (
-          <p className="muted">No live matches. Challenge a friend to start one.</p>
+        {others.length === 0 ? (
+          <p className="muted">
+            {forYou.length
+              ? 'Nothing else in play.'
+              : 'No live matches. Challenge a friend to start one.'}
+          </p>
         ) : (
-          live.map((v) => <MatchRow key={v.id} v={v} now={now} />)
+          others.map((v) => <MatchRow key={v.id} v={v} now={now} />)
         )}
       </section>
 

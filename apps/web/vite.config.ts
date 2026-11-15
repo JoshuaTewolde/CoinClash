@@ -37,6 +37,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['push-sw.js'],
+        // Push notification handlers (public/push-sw.js).
+        importScripts: ['/push-sw.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/socket\.io\//, /^\/health$/],
         // The Breez WASM (~13 MB) is too big to precache; cache it on first use instead.

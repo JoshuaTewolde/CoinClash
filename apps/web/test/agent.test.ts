@@ -14,6 +14,7 @@ function view(you: 'alice' | 'bob', over: Partial<MatchView> = {}): MatchView {
   return {
     id: 'm1',
     inviteCode: 'inv',
+    joinCode: null,
     gameId: 'tictactoe',
     status: 'AWAITING_LOCKS',
     stake: 1000,

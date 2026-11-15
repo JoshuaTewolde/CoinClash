@@ -49,7 +49,7 @@ export function Friend() {
         ))}
       </section>
       <div className="spacer" />
-      <ButtonLink to="/new" variant="primary" size="lg" block>
+      <ButtonLink to={`/new?friend=${encodeURIComponent(f.id)}`} variant="primary" size="lg" block>
         Challenge {f.nickname}
       </ButtonLink>
     </main>

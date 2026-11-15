@@ -1,5 +1,6 @@
 /** HTTP client for the CoinClash server. Same origin (Vite proxies /api in dev; Caddy in prod). */
 import type {
+  ActivityItem,
   FriendStats,
   InvitePreview,
   LoginRequest,
@@ -45,4 +46,7 @@ export const api = {
   friends: (token: string) =>
     request<FriendStats[]>(`/api/friends?tzOffset=${new Date().getTimezoneOffset()}`, { token }),
   invite: (code: string) => request<InvitePreview>(`/api/invites/${encodeURIComponent(code)}`),
+  joinCode: (digits: string) =>
+    request<{ inviteCode: string }>(`/api/join/${encodeURIComponent(digits)}`),
+  activity: (token: string) => request<ActivityItem[]>('/api/activity', { token }),
 };

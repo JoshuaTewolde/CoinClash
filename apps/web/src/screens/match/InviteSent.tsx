@@ -1,5 +1,6 @@
 import type { MatchView } from '@coinclash/shared';
-import { useState } from 'react';
+import QRCode from 'qrcode';
+import { useEffect, useState } from 'react';
 import { Amount, Button, Card, ScreenHead } from '../../design/components';
 import { GameBadge, gameMeta } from '../../games/registry';
 import { useSnapshot, useStoreApi } from '../../lib/StoreContext';
@@ -28,6 +29,12 @@ export function InviteSent({ view }: { view: MatchView }) {
   const [busy, setBusy] = useState(false);
   const name = gameMeta(view.gameId).name;
   const url = inviteUrl(view.inviteCode);
+  const [qr, setQr] = useState('');
+  useEffect(() => {
+    QRCode.toString(url, { type: 'svg', margin: 1, color: { dark: '#161310', light: '#FFFFFF' } })
+      .then(setQr)
+      .catch(() => setQr(''));
+  }, [url]);
 
   const share = async () => {
     setBusy(true);
@@ -58,6 +65,27 @@ export function InviteSent({ view }: { view: MatchView }) {
         Send this link to a friend. They can accept your stake, counter it, or take the lower of the
         two.
       </p>
+      {view.joinCode && (
+        <Card raised aria-label="Join code" className="center">
+          <span className="eyebrow">Or tell them this code</span>
+          <span className="join-code" data-testid="join-code">
+            {view.joinCode.slice(0, 3)} {view.joinCode.slice(3)}
+          </span>
+          <span className="muted">They tap “Join with code” on their Home screen.</span>
+        </Card>
+      )}
+      {qr && (
+        <Card aria-label="QR code" className="center">
+          <span className="eyebrow">Or scan with their camera</span>
+          <div
+            className="qr"
+            role="img"
+            aria-label="QR code for the invite link"
+            // Trusted output of the qrcode library (an SVG string), not user content.
+            dangerouslySetInnerHTML={{ __html: qr }}
+          />
+        </Card>
+      )}
       <Card tone="paper" dashed>
         <span className="eyebrow">Invite link</span>
         <code data-testid="invite-link" style={{ wordBreak: 'break-all', fontWeight: 700 }}>

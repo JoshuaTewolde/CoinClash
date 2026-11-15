@@ -6,6 +6,7 @@ import { clampStake, parseStake } from '../src/screens/StakeInput';
 const base: MatchView = {
   id: 'm',
   inviteCode: 'i',
+  joinCode: null,
   gameId: 'tictactoe',
   status: 'PROPOSED',
   stake: 2000,

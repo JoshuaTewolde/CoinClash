@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/dev-dist/**',
       '**/test-results/**',
       '**/playwright-report/**',
+      // Plain service-worker script (no bundler/TS); kept tiny and reviewed by hand.
+      'apps/web/public/push-sw.js',
     ],
   },
   js.configs.recommended,

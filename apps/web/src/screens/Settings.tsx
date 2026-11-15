@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Button, Card, ScreenHead } from '../design/components';
 import { NetworkChoices } from '../design/NetworkPicker';
+import { NotificationsToggle } from '../design/NotificationsToggle';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
 import { alwaysAskPasskey, setAlwaysAskPasskey } from '../wallet/vault';
 
@@ -36,6 +37,8 @@ export function Settings() {
           {user?.id}
         </code>
       </Card>
+
+      <NotificationsToggle />
 
       <Card aria-label="Security">
         <span className="eyebrow">Security</span>
