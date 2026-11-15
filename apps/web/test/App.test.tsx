@@ -1,10 +1,61 @@
-import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import type { PublicConfig } from '@coinclash/shared';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../src/App';
+import { Store } from '../src/lib/store';
 
-it('renders the token preview with a sats amount', () => {
-  render(<App />);
-  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('CoinClash');
-  expect(screen.getByText('10,000 sats')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'New challenge' })).toBeTruthy();
+afterEach(cleanup);
+
+const config: PublicConfig = {
+  network: 'regtest',
+  networks: ['regtest'],
+  stakeMin: 100,
+  stakeMax: 100_000,
+  games: [{ id: 'tictactoe', name: 'Tic-tac-toe', turnModel: 'alternating' }],
+};
+
+/** A store already in a given phase, without network calls. */
+function storeWith(patch: Record<string, unknown>): Store {
+  const store = new Store();
+  const s = store as unknown as { snap: Record<string, unknown> };
+  s.snap = { ...s.snap, config, ...patch };
+  return store;
+}
+
+describe('App shell', () => {
+  it('shows onboarding with the two-button flow when signed out', () => {
+    render(<App store={storeWith({ phase: 'signedOut' })} />);
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Sign in/ })).toBeTruthy();
+  });
+
+  it('validates the nickname before creating an account', () => {
+    render(<App store={storeWith({ phase: 'signedOut' })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(screen.getByRole('alert').textContent).toMatch(/at least 2/);
+  });
+
+  it('renders Home with plain sats, the network picker and "Coming soon" for real money', () => {
+    render(
+      <App
+        store={storeWith({ phase: 'ready', user: { id: 'u', nickname: 'Uma' }, balance: 10_000 })}
+      />,
+    );
+    expect(screen.getByText('10,000 sats')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /New challenge/ })).toBeTruthy();
+    const badge = screen.getByRole('button', { name: /TEST SATS/ });
+    fireEvent.click(badge);
+    const real = screen.getByRole('menuitemradio', { name: /Real money/ }) as HTMLButtonElement;
+    expect(real.disabled).toBe(true);
+    expect(real.textContent).toMatch(/Coming soon/);
+    expect(
+      screen.getByRole('menuitemradio', { name: /Test sats/ }).getAttribute('aria-checked'),
+    ).toBe('true');
+  });
+
+  it('shows a retry on connection errors', () => {
+    render(<App store={storeWith({ phase: 'error', error: 'Offline' })} />);
+    expect(screen.getByRole('alert').textContent).toBe('Offline');
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
 });

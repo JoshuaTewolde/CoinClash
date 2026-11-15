@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "e2e": "pnpm --filter @coinclash/web e2e"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

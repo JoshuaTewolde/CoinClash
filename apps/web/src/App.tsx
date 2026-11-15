@@ -1,42 +1,87 @@
-import { formatAmount } from '@coinclash/shared';
-import './App.css';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Button, ErrorText, Loading, Logo, BottomNav } from './design/components';
+import { Store } from './lib/store';
+import { StoreProvider, useSnapshot, useStoreApi } from './lib/StoreContext';
+import { Friend } from './screens/Friend';
+import { Home } from './screens/Home';
+import { Invite } from './screens/Invite';
+import { Match } from './screens/match/Match';
+import { NewChallenge } from './screens/NewChallenge';
+import { Onboarding } from './screens/Onboarding';
+import { Settings } from './screens/Settings';
+import { Wallet } from './screens/Wallet';
+import './design/ui.css';
 
-const swatches = [
-  { name: 'Tomato', varName: '--cc-tomato' },
-  { name: 'Sunflower', varName: '--cc-sunflower' },
-  { name: 'Teal', varName: '--cc-teal' },
-  { name: 'Ink', varName: '--cc-ink' },
-  { name: 'Paper', varName: '--cc-paper' },
-  { name: 'Money', varName: '--cc-money' },
-] as const;
+const TABS = new Set(['/', '/wallet', '/settings']);
 
-export function App() {
-  const pot = formatAmount(10_000, 'regtest');
+function Shell() {
+  const { phase, error, toast } = useSnapshot();
+  const store = useStoreApi();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  let body;
+  if (pathname.startsWith('/i/')) {
+    body = (
+      <Routes>
+        <Route path="/i/:code" element={<Invite />} />
+      </Routes>
+    );
+  } else if (phase === 'loading') {
+    body = <Loading />;
+  } else if (phase === 'error') {
+    body = (
+      <main className="screen">
+        <Logo />
+        <ErrorText>{error ?? 'Could not reach CoinClash.'}</ErrorText>
+        <Button variant="accent" onClick={() => void store.init()}>
+          Try again
+        </Button>
+      </main>
+    );
+  } else if (phase === 'signedOut') {
+    body = <Onboarding />;
+  } else {
+    body = (
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/new" element={<NewChallenge />} />
+        <Route path="/m/:id" element={<Match />} />
+        <Route path="/wallet" element={<Wallet />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/friends/:id" element={<Friend />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
   return (
-    <main className="preview">
-      <header className="preview__header">
-        <h1>
-          Coin<span className="preview__clash">Clash</span>
-        </h1>
-        <p>Friends-only games for sats. Design tokens preview; the app lands in Phase 4.</p>
-      </header>
+    <div className="app">
+      {body}
+      {phase === 'ready' && TABS.has(pathname) && <BottomNav />}
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <section className="preview__swatches" aria-label="Palette">
-        {swatches.map((s) => (
-          <div key={s.name} className="swatch">
-            <div className="swatch__chip" style={{ background: `var(${s.varName})` }} />
-            <span>{s.name}</span>
-          </div>
-        ))}
-      </section>
-
-      <section className="preview__card">
-        <h2>Pot</h2>
-        <p className="money">{pot.sats}</p>
-        <button type="button" className="press-button">
-          New challenge
-        </button>
-      </section>
-    </main>
+export function App({ store: given }: { store?: Store }) {
+  const [store] = useState(() => given ?? new Store());
+  useEffect(() => {
+    if (!given) void store.init();
+  }, [store, given]);
+  return (
+    <StoreProvider store={store}>
+      <BrowserRouter>
+        <Shell />
+      </BrowserRouter>
+    </StoreProvider>
   );
 }
