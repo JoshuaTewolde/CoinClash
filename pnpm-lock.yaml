@@ -56,6 +56,9 @@ importers:
       '@coinclash/game-tictactoe':
         specifier: workspace:*
         version: link:../../packages/games/tictactoe
+      '@coinclash/game-trivia':
+        specifier: workspace:*
+        version: link:../../packages/games/trivia
       '@coinclash/rail':
         specifier: workspace:*
         version: link:../../packages/rail
@@ -105,6 +108,9 @@ importers:
       '@coinclash/game-tictactoe':
         specifier: workspace:^
         version: link:../../packages/games/tictactoe
+      '@coinclash/game-trivia':
+        specifier: workspace:^
+        version: link:../../packages/games/trivia
       '@coinclash/rail':
         specifier: workspace:^
         version: link:../../packages/rail
@@ -159,6 +165,28 @@ importers:
         version: 3.23.2
 
   packages/games/tictactoe:
+    dependencies:
+      '@coinclash/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@types/react':
+        specifier: ^18.3.17
+        version: 18.3.31
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/games/trivia:
     dependencies:
       '@coinclash/game-sdk':
         specifier: workspace:*
