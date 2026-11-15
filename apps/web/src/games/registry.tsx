@@ -4,6 +4,7 @@
  */
 import type { BoardProps } from '@coinclash/game-sdk';
 import { Connect4Board } from '@coinclash/game-connect4/board';
+import { RpsBoard } from '@coinclash/game-rps/board';
 import { TicTacToeBoard } from '@coinclash/game-tictactoe/board';
 import type { ComponentType } from 'react';
 
@@ -28,7 +29,12 @@ export const GAMES: readonly GameMeta[] = [
     color: 'var(--cc-teal)',
     Board: Connect4Board as ComponentType<BoardProps>,
   },
-  { id: 'rps', name: 'Rock Paper Scissors', color: 'var(--cc-tomato)' },
+  {
+    id: 'rps',
+    name: 'Rock Paper Scissors',
+    color: 'var(--cc-tomato)',
+    Board: RpsBoard as ComponentType<BoardProps>,
+  },
   { id: 'trivia', name: 'Trivia', color: 'var(--cc-white)' },
 ];
 
