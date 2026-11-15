@@ -156,3 +156,26 @@ describe('RpsBoard', () => {
     expect(screen.getByLabelText('Score: you 0, them 1')).toBeTruthy();
   });
 });
+
+describe('clash animation', () => {
+  it('describes who beats whom from either side', async () => {
+    const { clashOf } = await import('../src/Board.js');
+    expect(clashOf('paper', 'rock')).toMatchObject({
+      kind: 'covers',
+      winnerSide: 'left',
+      caption: 'Paper covers rock',
+    });
+    expect(clashOf('scissors', 'rock')).toMatchObject({
+      kind: 'breaks',
+      winnerSide: 'right',
+      caption: 'Rock breaks scissors',
+    });
+    expect(clashOf('paper', 'scissors')).toMatchObject({
+      kind: 'cut',
+      winnerSide: 'right',
+      caption: 'Scissors cut paper',
+    });
+    expect(clashOf('rock', 'rock')).toMatchObject({ kind: 'tie', caption: 'Same pick!' });
+    expect(clashOf(null, 'rock')).toBeNull();
+  });
+});

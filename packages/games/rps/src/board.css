@@ -201,3 +201,222 @@
     transition: none;
   }
 }
+
+/* ---------- clash animation (paper covers rock, rock breaks scissors, scissors cut paper) ---------- */
+.rps-clash {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cc-space-1, 4px);
+}
+
+.rps-clash__stage {
+  position: relative;
+  width: min(260px, 100%);
+  height: 96px;
+}
+
+.rps-clash__piece {
+  position: absolute;
+  top: 8px;
+  width: 80px;
+  height: 80px;
+  display: block;
+  --toward: 1;
+  animation-duration: 1.2s;
+  animation-fill-mode: both;
+  animation-timing-function: var(--cc-ease-bounce, ease-out);
+}
+
+.rps-clash__piece .rps__icon,
+.rps-clash__half .rps__icon {
+  width: 100%;
+  height: 100%;
+}
+
+.rps-clash__piece--left {
+  left: 0;
+}
+
+.rps-clash__piece--right {
+  right: 0;
+  --toward: -1;
+}
+
+.rps-clash__piece--tie {
+  animation-name: rps-bump;
+}
+
+/* covers: the paper glides on top of the rock and wraps it; the rock sinks away. */
+.rps-clash--covers .rps-clash__piece--winner {
+  z-index: 2;
+  animation-name: rps-cover;
+}
+
+.rps-clash--covers .rps-clash__piece--loser {
+  animation-name: rps-sink;
+}
+
+/* breaks: the rock jumps and slams. cut: the scissors snip. Either way the loser splits. */
+.rps-clash--breaks .rps-clash__piece--winner {
+  z-index: 2;
+  animation-name: rps-slam;
+}
+
+.rps-clash--cut .rps-clash__piece--winner {
+  z-index: 2;
+  animation-name: rps-snip;
+}
+
+.rps-clash__half {
+  position: absolute;
+  inset: 0;
+  animation-duration: 1.2s;
+  animation-fill-mode: both;
+  animation-timing-function: ease-in;
+}
+
+.rps-clash__half--a {
+  clip-path: polygon(0 0, 55% 0, 45% 100%, 0 100%);
+  animation-name: rps-split-a;
+}
+
+.rps-clash__half--b {
+  clip-path: polygon(55% 0, 100% 0, 100% 100%, 45% 100%);
+  animation-name: rps-split-b;
+}
+
+.rps-clash__caption {
+  margin: 0;
+  font-weight: 800;
+  font-size: var(--cc-text-md, 1.0625rem);
+  animation: rps-caption 1.2s ease-out both;
+}
+
+/* The stage leaves a 100px gap between the two 80px pieces. */
+@keyframes rps-bump {
+  0% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(calc(var(--toward) * 42px)) scale(1.05);
+  }
+  55% {
+    transform: translateX(calc(var(--toward) * 30px)) rotate(calc(var(--toward) * -8deg));
+  }
+  100% {
+    transform: translateX(calc(var(--toward) * 20px));
+  }
+}
+
+@keyframes rps-cover {
+  0% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(calc(var(--toward) * 40px)) translateY(-14px)
+      rotate(calc(var(--toward) * -10deg));
+  }
+  65%,
+  100% {
+    transform: translateX(calc(var(--toward) * 90px)) scale(1.18);
+  }
+}
+
+@keyframes rps-sink {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  35% {
+    transform: translateX(calc(var(--toward) * 10px));
+  }
+  65% {
+    transform: translateX(calc(var(--toward) * 10px)) scale(0.8);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(calc(var(--toward) * 10px)) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes rps-slam {
+  0% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(calc(var(--toward) * 60px)) translateY(-36px)
+      rotate(calc(var(--toward) * 20deg));
+  }
+  55% {
+    transform: translateX(calc(var(--toward) * 82px)) translateY(4px) scale(1.08, 0.92);
+  }
+  100% {
+    transform: translateX(calc(var(--toward) * 82px));
+  }
+}
+
+@keyframes rps-snip {
+  0% {
+    transform: translateX(0) rotate(0);
+  }
+  30% {
+    transform: translateX(calc(var(--toward) * 70px)) rotate(calc(var(--toward) * -18deg));
+  }
+  40% {
+    transform: translateX(calc(var(--toward) * 76px)) rotate(calc(var(--toward) * 12deg));
+  }
+  50% {
+    transform: translateX(calc(var(--toward) * 82px)) rotate(calc(var(--toward) * -18deg));
+  }
+  60%,
+  100% {
+    transform: translateX(calc(var(--toward) * 90px)) rotate(0);
+  }
+}
+
+@keyframes rps-split-a {
+  0%,
+  50% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-22px, 20px) rotate(-28deg);
+    opacity: 0;
+  }
+}
+
+@keyframes rps-split-b {
+  0%,
+  50% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: translate(22px, -12px) rotate(24deg);
+    opacity: 0;
+  }
+}
+
+@keyframes rps-caption {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rps-clash__piece,
+  .rps-clash__half,
+  .rps-clash__caption {
+    animation-duration: 0.01ms !important;
+  }
+}

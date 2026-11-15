@@ -107,6 +107,7 @@ export function RpsBoard({ view, you, canMove, onMove }: BoardProps<RpsView, Rps
             last.picks[them] ?? 'ran out of time'
           }`}
         >
+          <Clash mine={last.picks[self] ?? null} theirs={last.picks[them] ?? null} />
           <RevealSide pick={last.picks[self] ?? null} who="You" />
           <span className="rps__vs">vs</span>
           <RevealSide pick={last.picks[them] ?? null} who="Them" flip />
@@ -174,6 +175,68 @@ function TimeoutIcon() {
       <circle cx="24" cy="26" r="15" fill="var(--cc-paper)" />
       <path d="M24 17v9l6 4M20 6h8" />
     </svg>
+  );
+}
+
+/** What beats what, and the verb for it. */
+const BEATS: Record<Pick, { beats: Pick; kind: 'covers' | 'breaks' | 'cut' }> = {
+  paper: { beats: 'rock', kind: 'covers' },
+  rock: { beats: 'scissors', kind: 'breaks' },
+  scissors: { beats: 'paper', kind: 'cut' },
+};
+
+export function clashOf(mine: Pick | null, theirs: Pick | null) {
+  if (!mine || !theirs) return null;
+  if (mine === theirs) return { kind: 'tie' as const, winnerSide: null, caption: 'Same pick!' };
+  const mineWins = BEATS[mine].beats === theirs;
+  const winner = mineWins ? mine : theirs;
+  const loser = mineWins ? theirs : mine;
+  return {
+    kind: BEATS[winner].kind,
+    winnerSide: mineWins ? ('left' as const) : ('right' as const),
+    caption: `${LABEL[winner]} ${BEATS[winner].kind} ${LABEL[loser].toLowerCase()}`,
+  };
+}
+
+/**
+ * The clash: the winner acts on the loser. Paper covers rock, rock breaks scissors,
+ * scissors cut paper (the loser splits in two); a tie bumps and bounces back.
+ */
+function Clash({ mine, theirs }: { mine: Pick | null; theirs: Pick | null }) {
+  const c = clashOf(mine, theirs);
+  if (!c || !mine || !theirs) return null;
+  const role = (side: 'left' | 'right') =>
+    c.winnerSide === null ? 'tie' : c.winnerSide === side ? 'winner' : 'loser';
+  const piece = (pick: Pick, side: 'left' | 'right') => {
+    const r = role(side);
+    const cls = `rps-clash__piece rps-clash__piece--${side} rps-clash__piece--${r}`;
+    if (r === 'loser' && c.kind !== 'covers') {
+      // Broken or cut: two clipped halves fly apart.
+      return (
+        <span className={cls} aria-hidden="true">
+          <span className="rps-clash__half rps-clash__half--a">
+            <PickIcon pick={pick} />
+          </span>
+          <span className="rps-clash__half rps-clash__half--b">
+            <PickIcon pick={pick} />
+          </span>
+        </span>
+      );
+    }
+    return (
+      <span className={cls} aria-hidden="true">
+        <PickIcon pick={pick} />
+      </span>
+    );
+  };
+  return (
+    <div className={`rps-clash rps-clash--${c.kind}`} data-testid="rps-clash">
+      <div className="rps-clash__stage">
+        {piece(mine, 'left')}
+        {piece(theirs, 'right')}
+      </div>
+      <p className="rps-clash__caption">{c.caption}</p>
+    </div>
   );
 }
 
