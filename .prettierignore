@@ -5,3 +5,6 @@ node_modules
 pnpm-lock.yaml
 docs/SPEC.md
 .data
+test-results
+playwright-report
+blob-report
