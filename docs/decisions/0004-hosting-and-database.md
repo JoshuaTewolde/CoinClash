@@ -37,10 +37,10 @@ for MongoDB Atlas.
 
 Vultr Chicago, 1 vCPU / 2 GB RAM / 55 GB SSD, Ubuntu 24.04, IPv4 `64.177.9.254`, hostname `coinclash`.
 
-- **Access:** SSH as `root` with the ed25519 deploy key (`~/.ssh/coinclash_deploy` on the owner's
-  machine; the private key is also the `VULTR_SSH_KEY` GitHub secret). **Password and
-  keyboard-interactive login are disabled** (`/etc/ssh/sshd_config.d/00-coinclash.conf`), because
-  the root password was shared in chat. Recovery is via the Vultr web console.
+- **Access:** SSH as `root`, either with the ed25519 deploy key (`~/.ssh/coinclash_deploy` on
+  the owner's machine; the private key is also the `VULTR_SSH_KEY` GitHub secret) or with the root
+  password. Password login was briefly disabled, then re-enabled at the owner's request. fail2ban
+  limits password guessing.
 - **Installed:** Docker Engine and the Compose plugin (official Docker apt repo), fail2ban,
   unattended-upgrades. A swapfile backs the 2 GB of RAM during image builds.
 - **Firewall (ufw):** deny incoming except 22/tcp, 80/tcp, 443/tcp and 443/udp (HTTP/3).

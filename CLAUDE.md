@@ -58,30 +58,40 @@ consume it directly, and the server's tsup build bundles it. There are no per-pa
 - Amounts: always "sats" (never "test sats" or "demo"; ADR 0009). Dollars appear only on mainnet.
   The network shows only on the Home badge and in Settings. Use `formatAmount` from `@coinclash/shared`.
 
-## Breez SDK (Spark): verified API notes (@breeztech/breez-sdk-spark, v0.28.x)
+## Breez SDK (Spark): verified API notes (@breeztech/breez-sdk-spark 0.28.4, ADR 0012)
 
-Verify against https://sdk-doc-spark.breez.technology/ and `github.com/breez/spark-sdk`
-(`docs/breez-sdk/snippets/wasm/*.ts`) before using anything new. Do not invent method names.
+Verify against https://sdk-doc-spark.breez.technology/, the installed `.d.ts` files, and
+`github.com/breez/spark-sdk` (`docs/breez-sdk/snippets/wasm/*.ts`) before using anything new.
+Do not invent method names.
 
-- Web: `await init()` first (WASM). Node: no init. Then `connect({ config, seed, storageDir })`, where
-  `config = defaultConfig('regtest' | 'mainnet')` and `config.apiKey` is required.
-- Passkeys: `PasskeyClient(apiKey, { providerOptions: { rpId, rpName } })` from
-  `@breeztech/breez-sdk-spark/passkey-prf-provider`. Methods: `checkAvailability`, `register`,
-  `signIn`, `connectWithPasskey`. Each returns `wallet.seed` for `connect`. **Wallets are bound to rpId.**
-- Auth: `sdk.signMessage({ message, compact })` returns `{ pubkey, signature }`. The server verifies with
-  `sdk.checkMessage({ message, pubkey, signature })`, which returns `{ isValid }`. Identity is `getInfo().identityPubkey`.
-- **Match money = Spark HTLCs (ADR 0002).** Lock: `prepareSendPayment({ paymentRequest: { type:
-'input', input: <opponent spark address> }, amount })` then `sendPayment({ prepareResponse,
-options: { type: 'sparkAddress', htlcOptions: { paymentHash, expiryDurationSecs } } })`. The
-  incoming lock shows as a pending payment with `details.htlcDetails` (`paymentHash`, `expiryTime`,
-  status `waitingForPreimage`). Claim: `claimHtlcPayment({ preimage })`. Unclaimed locks return to
-  the sender at expiry. Preimages must be unique (the server generates them per match).
-- Events: `addEventListener({ onEvent })`, using `paymentSucceeded | paymentPending | paymentFailed | synced`.
-  Backup polling: `listPayments({ typeFilter: ['receive'], fromTimestamp })`, `getPayment({ paymentId })`.
-- Send: `prepareSendPayment({ paymentRequest: { type: 'input', input }, amount })` gives the fee
-  estimate. Then call `sendPayment({ prepareResponse })`.
-- Fiat: `listFiatRates()`. Balance: `getInfo({ ensureSynced }).balanceSats`.
-- TODO (Phase 5): confirm the exact Node.js import path for the server build.
+- Imports: web `@breeztech/breez-sdk-spark/web` (default export = WASM `init()`, call it first);
+  Node/server `@breeztech/breez-sdk-spark/nodejs` (no init). Then
+  `connect({ config, seed, storageDir })` with `config = defaultConfig('regtest' | 'mainnet')`
+  and `config.apiKey` set. Seed: `{ type: 'mnemonic', mnemonic }` or the passkey's `wallet.seed`.
+- **Amounts are `bigint`** (`amount`, `fee`, `payment.amount`). Convert only at the wallet boundary.
+- Passkeys (custom rpId): `new PasskeyClientBuilder(apiKey, { providerOptions: { rpId, rpName } })
+.withPrfProvider(new PasskeyProvider({ rpId, rpName })).build()` from
+  `@breeztech/breez-sdk-spark/passkey-prf-provider`. Then `checkAvailability()`,
+  `register({ label })`, `signIn({ label })`, which give `{ wallet: { seed, label } }`. Our label
+  is `coinclash`. **Wallets are bound to rpId.**
+- Auth: `signMessage({ message, compact: true })` gives `{ pubkey, signature }`. The server calls
+  `checkMessage({ message, pubkey, signature })`, which gives `{ isValid }`. Identity is
+  `getInfo({}).identityPubkey`.
+- Spark address: `receivePayment({ paymentMethod: { type: 'sparkAddress' } }).paymentRequest`.
+  On-chain deposit address (faucet): `type: 'bitcoinAddress'`.
+- **HTLC lock:** `prepareSendPayment({ paymentRequest: { type: 'input', input: <spark address> },
+amount: BigInt(n) })`, then `sendPayment({ prepareResponse, options: { type: 'sparkAddress',
+htlcOptions: { paymentHash, expiryDurationSecs } }, idempotencyKey })`. Find incoming locks
+  with `listPayments({ typeFilter: ['receive'], paymentDetailsFilter: [{ type: 'spark',
+htlcStatus: [...] }] })`, where `details.htlcDetails` has `{ paymentHash, expiryTime, status:
+waitingForPreimage | preimageShared | returned }`. Claim with `claimHtlcPayment({ preimage })`.
+  Unclaimed locks return to the sender at expiry.
+- **`idempotencyKey` must be a UUID.** Use `idempotencyUuid('<logical key>')` from `@coinclash/rail`.
+- Events: `addEventListener({ onEvent })` returns an id (`removeEventListener(id)`). Event types
+  are `paymentSucceeded | paymentPending | paymentFailed | synced | claimedDeposits | …`.
+- Balance: `getInfo({ ensureSynced })`, then `.balanceSats`. Fiat: `listFiatRates()`.
+- Regtest tooling: `pnpm --filter @coinclash/server regtest <mnemonic|info|fund|smoke>`
+  (docs/testing-regtest.md).
 
 ## Secrets
 
@@ -109,6 +119,8 @@ non-trivial design choice, and amend `docs/SPEC.md` with a pointer when an ADR c
 - 2026-11-14: Production domain is **coinclash.vip** (passkey rpId `coinclash.vip`). Database is
   **MongoDB Atlas**; tests still use mongodb-memory-server.
 - 2026-11-14: Server core design (ADR 0007). Instant payout mode accepted, built as Phase 5b (ADR 0008). Players pick the network; test only for now (ADR 0010). Server provisioned (ADR 0004).
+- 2026-11-15: Breez integration: house wallet = signature verifier + welcome bonus; passkeys via
+  PasskeyClientBuilder; UUID idempotency keys (ADR 0012).
 - 2026-11-15: Web app architecture: one store, one route per match, MatchAgent, mock wallet over
   HTTP in NETWORK=mock only (ADR 0011).
 - Future work (don't build): encrypt HTLC preimages at rest; one-button passkey flow.
