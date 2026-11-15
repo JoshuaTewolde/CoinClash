@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@breeztech/breez-sdk-spark": "0.28.4",
+    "@coinclash/game-connect4": "workspace:*",
     "@coinclash/game-sdk": "workspace:*",
     "@coinclash/game-tictactoe": "workspace:*",
     "@coinclash/rail": "workspace:*",
