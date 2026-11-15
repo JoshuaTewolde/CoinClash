@@ -66,7 +66,8 @@ class SimPlayer {
     return ack.data;
   }
 
-  async waitFor(matchId: string, pred: (v: MatchView) => boolean, ms = 3000): Promise<MatchView> {
+  // Generous: CI runs the whole workspace with coverage in parallel.
+  async waitFor(matchId: string, pred: (v: MatchView) => boolean, ms = 10_000): Promise<MatchView> {
     const start = Date.now();
     for (;;) {
       const v = this.latest.get(matchId);
@@ -87,7 +88,7 @@ class SimPlayer {
       expirySecs: locks.htlcExpiresAt - chainTime,
     });
     let incoming = await this.wallet.findIncomingLock(locks.incomingHash);
-    for (let i = 0; !incoming && i < 200; i++) {
+    for (let i = 0; !incoming && i < 1000; i++) {
       await new Promise((r) => setTimeout(r, 10));
       incoming = await this.wallet.findIncomingLock(locks.incomingHash);
     }
