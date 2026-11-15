@@ -28,3 +28,4 @@ blob-report/
 
 # Agent worktrees
 .claude/worktrees/
+apps/web/demo-out/
