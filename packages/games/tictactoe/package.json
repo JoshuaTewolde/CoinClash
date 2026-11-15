@@ -1,0 +1,16 @@
+{
+  "name": "@coinclash/game-tictactoe",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./engine": "./src/engine.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@coinclash/game-sdk": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}
