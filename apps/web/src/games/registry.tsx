@@ -6,6 +6,7 @@ import type { BoardProps } from '@coinclash/game-sdk';
 import { Connect4Board } from '@coinclash/game-connect4/board';
 import { RpsBoard } from '@coinclash/game-rps/board';
 import { TicTacToeBoard } from '@coinclash/game-tictactoe/board';
+import { TriviaBoard } from '@coinclash/game-trivia/board';
 import type { ComponentType } from 'react';
 
 export interface GameMeta {
@@ -35,7 +36,12 @@ export const GAMES: readonly GameMeta[] = [
     color: 'var(--cc-tomato)',
     Board: RpsBoard as ComponentType<BoardProps>,
   },
-  { id: 'trivia', name: 'Trivia', color: 'var(--cc-white)' },
+  {
+    id: 'trivia',
+    name: 'Trivia',
+    color: 'var(--cc-white)',
+    Board: TriviaBoard as ComponentType<BoardProps>,
+  },
 ];
 
 export function gameMeta(id: string): GameMeta {

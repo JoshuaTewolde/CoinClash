@@ -1,0 +1,214 @@
+/* Trivia board. Uses the web app's Sticker Arcade tokens (apps/web/src/design/tokens.css). */
+.trivia {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-3);
+  width: 100%;
+}
+
+.trivia__score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cc-space-2);
+}
+
+.trivia__chip {
+  border: var(--cc-outline);
+  border-radius: var(--cc-radius-pill);
+  background: var(--cc-white);
+  padding: var(--cc-space-1) var(--cc-space-3);
+  font-size: var(--cc-text-sm);
+  font-weight: 700;
+}
+
+.trivia__chip strong {
+  font-family: var(--cc-font-display);
+  font-size: var(--cc-text-md);
+  margin-left: var(--cc-space-1);
+}
+
+.trivia__vs {
+  font-size: var(--cc-text-xs);
+  color: var(--cc-ink-soft);
+}
+
+.trivia__card,
+.trivia__reveal {
+  border: var(--cc-outline);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-sunflower);
+  box-shadow: var(--cc-shadow);
+  padding: var(--cc-space-4);
+}
+
+.trivia__reveal {
+  background: var(--cc-white);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-3);
+  animation: trivia-pop 280ms var(--cc-ease-bounce);
+}
+
+.trivia__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--cc-space-2);
+  font-size: var(--cc-text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.trivia__prompt {
+  margin: var(--cc-space-2) 0 0;
+  font-family: var(--cc-font-display);
+  font-size: var(--cc-text-lg);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.trivia__verdict {
+  margin: 0;
+  font-family: var(--cc-font-display);
+  font-size: var(--cc-text-xl);
+  font-weight: 800;
+  color: var(--cc-tomato);
+}
+
+.trivia__verdict--right {
+  color: var(--cc-teal);
+}
+
+.trivia__options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--cc-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trivia__option {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-3);
+  min-height: calc(var(--cc-touch-min) + var(--cc-space-3));
+  width: 100%;
+  border: var(--cc-outline);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-white);
+  box-shadow: var(--cc-shadow-pressed);
+  padding: var(--cc-space-2) var(--cc-space-3);
+  color: var(--cc-ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--cc-press-ms),
+    box-shadow var(--cc-press-ms);
+}
+
+button.trivia__option:not(:disabled) {
+  box-shadow: var(--cc-shadow);
+}
+
+button.trivia__option:not(:disabled):active {
+  transform: translate(4px, 4px);
+  box-shadow: var(--cc-shadow-pressed);
+}
+
+button.trivia__option:disabled {
+  cursor: default;
+}
+
+.trivia__option:focus-visible {
+  outline: 3px solid var(--cc-teal);
+  outline-offset: 2px;
+}
+
+.trivia__option--picked {
+  background: var(--cc-sunflower);
+}
+
+.trivia__option--static {
+  cursor: default;
+}
+
+.trivia__option--correct {
+  background: var(--cc-teal);
+  color: var(--cc-white);
+  animation: trivia-pop 320ms var(--cc-ease-bounce);
+}
+
+.trivia__option--wrong {
+  background: var(--cc-tomato);
+  color: var(--cc-white);
+}
+
+.trivia__letter {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: var(--cc-outline);
+  border-radius: var(--cc-radius-sm);
+  background: var(--cc-paper);
+  color: var(--cc-ink);
+  font-family: var(--cc-font-display);
+}
+
+.trivia__text {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.trivia__tag {
+  flex: none;
+  border: var(--cc-outline);
+  border-radius: var(--cc-radius-pill);
+  background: var(--cc-white);
+  color: var(--cc-ink);
+  padding: 0 var(--cc-space-2);
+  font-size: var(--cc-text-xs);
+}
+
+.trivia__status {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+}
+
+.trivia__next {
+  min-height: var(--cc-touch-min);
+  border: var(--cc-outline);
+  border-radius: var(--cc-radius-pill);
+  background: var(--cc-white);
+  box-shadow: var(--cc-shadow);
+  color: var(--cc-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@keyframes trivia-pop {
+  from {
+    transform: scale(0.92);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trivia__reveal,
+  .trivia__option--correct {
+    animation: none;
+  }
+  .trivia__option {
+    transition: none;
+  }
+}

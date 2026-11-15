@@ -17,6 +17,7 @@
     "@coinclash/game-rps": "workspace:^",
     "@coinclash/game-sdk": "workspace:^",
     "@coinclash/game-tictactoe": "workspace:^",
+    "@coinclash/game-trivia": "workspace:^",
     "@coinclash/rail": "workspace:^",
     "@coinclash/shared": "workspace:*",
     "@noble/hashes": "^1.6.1",
