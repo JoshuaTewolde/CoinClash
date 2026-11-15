@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { paymentHashOf, signedMessages } from '../src/index.js';
+import { idempotencyUuid, paymentHashOf, signedMessages } from '../src/index.js';
 import { MockNetwork, mockSignature, mockVerifier } from '../src/mock.js';
 
 const PRE_A = 'aa'.repeat(32);
@@ -26,6 +26,15 @@ describe('payment hashes and messages', () => {
     expect(signedMessages.login('n1')).toBe('coinclash:v1:login:n1');
     expect(signedMessages.lockSeen('m', 'h', 5)).toBe('coinclash:v1:lock-seen:m:h:5');
     expect(signedMessages.claimed('m', 'h')).toBe('coinclash:v1:claimed:m:h');
+  });
+});
+
+describe('idempotencyUuid', () => {
+  it('is a stable, valid v4-layout UUID per key', () => {
+    const a = idempotencyUuid('bonus:alice');
+    expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(idempotencyUuid('bonus:alice')).toBe(a);
+    expect(idempotencyUuid('bonus:bob')).not.toBe(a);
   });
 });
 

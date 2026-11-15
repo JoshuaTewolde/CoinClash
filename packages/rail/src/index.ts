@@ -79,3 +79,16 @@ export const signedMessages = {
   claimed: (matchId: string, paymentHash: string) =>
     `coinclash:v1:claimed:${matchId}:${paymentHash}`,
 };
+
+/**
+ * Deterministic UUID (v4 layout) for a logical payment key, e.g. `bonus:<user>` or
+ * `lock:<paymentHash>`. Breez `sendPayment` takes an idempotency key that must be a UUID;
+ * reusing the same UUID guarantees the payment is made once.
+ */
+export function idempotencyUuid(key: string): string {
+  const b = sha256(new TextEncoder().encode(`coinclash:v1:idem:${key}`)).slice(0, 16);
+  b[6] = (b[6]! & 0x0f) | 0x40;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const h = bytesToHex(b);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
