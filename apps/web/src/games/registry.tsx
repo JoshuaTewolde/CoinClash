@@ -3,6 +3,7 @@
  * `/api/config` decides which games are playable; the others show as "Coming soon".
  */
 import type { BoardProps } from '@coinclash/game-sdk';
+import { PoolBoard } from '@coinclash/game-pool/board';
 import { TicTacToeBoard } from '@coinclash/game-tictactoe/board';
 import type { ComponentType } from 'react';
 
@@ -20,6 +21,12 @@ export const GAMES: readonly GameMeta[] = [
     name: 'Tic-tac-toe',
     color: 'var(--cc-sunflower)',
     Board: TicTacToeBoard as ComponentType<BoardProps>,
+  },
+  {
+    id: 'pool',
+    name: 'Pool',
+    color: 'var(--cc-teal)',
+    Board: PoolBoard as ComponentType<BoardProps>,
   },
   { id: 'connect4', name: 'Connect 4', color: 'var(--cc-teal)' },
   { id: 'rps', name: 'Rock Paper Scissors', color: 'var(--cc-tomato)' },
@@ -48,6 +55,16 @@ export function GameIcon({ id }: { id: string }) {
           <path d="M6 6l5 5M11 6l-5 5" strokeWidth="2.5" />
           <circle cx="20" cy="20" r="3.2" strokeWidth="2.5" />
           <path d="M29 29l5 5M34 29l-5 5" strokeWidth="2.5" />
+        </svg>
+      );
+    case 'pool':
+      return (
+        <svg className="game-icon" viewBox="0 0 40 40" aria-hidden="true" {...stroke}>
+          <path d="M4 36l11-11" strokeWidth="6" />
+          <path d="M4 36l11-11" stroke="var(--cc-sunflower)" strokeWidth="2.5" />
+          <circle cx="24" cy="16" r="11" fill="var(--cc-ink)" />
+          <circle cx="24" cy="16" r="4.5" fill="var(--cc-white)" strokeWidth="2" />
+          <circle cx="11" cy="9" r="5" fill="var(--cc-white)" />
         </svg>
       );
     case 'connect4':
