@@ -52,24 +52,17 @@ right) from `demo/` (file names in brackets). Speak at a relaxed pace, about 140
 | The moment the game ends, the winner gets the whole pot. It's sent straight to their wallet, and it's done before the confetti finishes.        | **[12-result]** "You won!", "Paid +2,000 sats", the other phone offered a rematch. |
 | Your history tells you exactly who you played and what you won or lost, and every friend shows your record and how many sats you're up or down. | **[13-wallet-friends]** Wallet history with names and games, friend page "+ sats". |
 
-### 7. Try it, then hand off to the wallet (3:10–3:30)
+### 7. Try it (3:10–3:25)
 
-| Say                                                                                                                                                                          | Show                                                                                                         |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| If you just want to try it, you can play our bot for free, no account needed.                                                                                                | **[15-practice]** Practice picker, a quick game against CoinBot.                                             |
-| Under the hood it's all the Breez SDK on Spark: passkey wallets, instant invoices, signed logins and live exchange rates. And the sats you win don't have to stay in a game. | **[16-settings]** Settings (sounds, stay signed in, money mode), then a slow fade toward the wallet segment. |
+| Say                                                                                                                       | Show                                                             |
+| ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| If you just want to try it, you can play our bot for free, no account needed.                                             | **[15-practice]** Practice picker, a quick game against CoinBot. |
+| Under the hood it's all the Breez SDK on Spark: passkey wallets, instant invoices, signed logins and live exchange rates. | **[16-settings]** Settings (sounds, stay signed in, money mode). |
 
-### 8. The wallet app (3:30–4:30): your segment
+### 8. Close (3:25–3:35)
 
-| Say                                                                                                                                               | Show                                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| _Bridge line:_ That's where our everyday wallet comes in, built on the same Breez SDK, for everything you do with your sats outside of CoinClash. | Transition card ("Your sats, everywhere") into your wallet footage. |
-| _(Your ~55 seconds on the wallet app.)_                                                                                                           | Your wallet clips.                                                  |
+| Say                                                                                 | Show                                                                                                            |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| CoinClash is live today at coinclash.vip, so grab a friend and go settle something. | End card: CoinClash logo, coinclash.vip, the repo link, "Built on Breez SDK · Spark". Hold 3 seconds, fade out. |
 
-### 9. Close (4:30–4:40)
-
-| Say                                                                                                                  | Show                                                                                                                                          |
-| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Both are live today. Play at coinclash.vip, keep your winnings in the wallet, and go settle something with a friend. | End card: CoinClash logo, coinclash.vip, the wallet app's name/link, both repo links, "Built on Breez SDK · Spark". Hold 3 seconds, fade out. |
-
-Total ≈ 4:40. If you must stay under 4:30, cut the tic-tac-toe line in section 5 (≈ 10 s).
+Total ≈ 3:35.
