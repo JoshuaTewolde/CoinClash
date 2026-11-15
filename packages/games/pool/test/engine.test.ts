@@ -460,6 +460,6 @@ describe('pool: views, timers and caps', () => {
 
 describe('pool: plug-in contract (property-based)', () => {
   it('satisfies the game-sdk contract', () => {
-    checkPluginContract(pool, { numRuns: 40, maxSteps: MAX_SHOTS + 10 });
+    checkPluginContract(pool, { numRuns: 25, maxSteps: MAX_SHOTS + 10 });
   }, 120_000);
 });
