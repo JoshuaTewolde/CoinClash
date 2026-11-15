@@ -94,7 +94,7 @@ describe('PoolBoard', () => {
     expect(onMove).toHaveBeenLastCalledWith({ angle: 1000, power: 60 });
   });
 
-  it('drag back from the cue ball to aim and shoot', () => {
+  it('drag on the felt to aim at your finger, then shoot', () => {
     const { session, shooter } = freshSession();
     const onMove = vi.fn();
     render(
@@ -109,21 +109,75 @@ describe('PoolBoard', () => {
     // Rendered 1:1 with the viewBox (1072 × 572, rail 36), so client = table + 36.
     svg.getBoundingClientRect = () =>
       ({ left: 0, top: 0, width: 1072, height: 572, right: 1072, bottom: 572 }) as DOMRect;
-    // Cue ball sits on the head spot (250, 250). Pull straight left by 130 units.
-    fireEvent.pointerDown(svg, { clientX: 286, clientY: 286, pointerId: 1 });
-    fireEvent.pointerMove(svg, { clientX: 200, clientY: 286, pointerId: 1 });
-    fireEvent.pointerUp(svg, { clientX: 156, clientY: 286, pointerId: 1 });
-    expect(onMove).toHaveBeenCalledTimes(1);
-    expect(onMove).toHaveBeenCalledWith({ angle: 0, power: 50 });
+    // Cue ball on the head spot (250, 250). Drag to the right of it: aim 0°. Dragging only aims.
+    fireEvent.pointerDown(svg, { clientX: 386, clientY: 286, pointerId: 1 });
+    fireEvent.pointerMove(svg, { clientX: 486, clientY: 286, pointerId: 1 });
+    fireEvent.pointerUp(svg, { clientX: 486, clientY: 286, pointerId: 1 });
+    expect(onMove).not.toHaveBeenCalled();
+    fireEvent.click(shootButton());
+    expect(onMove).toHaveBeenCalledWith({ angle: 0, power: 60 });
 
-    // Pulling down-right shoots up-left; a tap on the cue ball itself does nothing.
-    fireEvent.pointerDown(svg, { clientX: 386, clientY: 386, pointerId: 1 });
-    fireEvent.pointerUp(svg, { clientX: 386, clientY: 386, pointerId: 1 });
-    expect(onMove).toHaveBeenLastCalledWith({ angle: 225000, power: 54 });
+    // Down-left of the cue ball → 135°. A tap on the cue ball itself doesn't change the aim.
+    fireEvent.pointerDown(svg, { clientX: 186, clientY: 386, pointerId: 1 });
+    fireEvent.pointerUp(svg, { clientX: 186, clientY: 386, pointerId: 1 });
     fireEvent.pointerDown(svg, { clientX: 286, clientY: 286, pointerId: 1 });
     fireEvent.pointerCancel(svg, { pointerId: 1 });
-    fireEvent.pointerUp(svg, { clientX: 286, clientY: 286, pointerId: 1 });
-    expect(onMove).toHaveBeenCalledTimes(2);
+    fireEvent.click(shootButton());
+    expect(onMove).toHaveBeenLastCalledWith({ angle: 135000, power: 60 });
+  });
+
+  it('review mode shows the table without controls or aim', () => {
+    const { session, shooter } = freshSession();
+    render(
+      <PoolBoard
+        view={pool.viewFor(session.state, shooter)}
+        you={shooter}
+        canMove
+        onMove={vi.fn()}
+        mode="review"
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Shoot' })).toBeNull();
+    expect(screen.queryByText(/Full table/)).toBeNull();
+    expect(document.querySelector('.pool__aim')).toBeNull();
+  });
+
+  it('full table: the right-edge power cue shoots on release, and cancels near the top', async () => {
+    const { PowerCue } = await import('../src/Board.js');
+    const onShoot = vi.fn();
+    const onPower = vi.fn();
+    const { rerender } = render(<PowerCue ready onPower={onPower} onShoot={onShoot} />);
+    const cueEl = screen.getByRole('slider', { name: /Power cue/ });
+    cueEl.getBoundingClientRect = () => ({ top: 0, height: 250, bottom: 250 }) as DOMRect;
+    fireEvent.pointerDown(cueEl, { clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cueEl, { clientY: 110, pointerId: 1 }); // 100 / (250·0.8) = 50%
+    expect(onPower).toHaveBeenLastCalledWith(50);
+    fireEvent.pointerUp(cueEl, { clientY: 110, pointerId: 1 });
+    expect(onShoot).toHaveBeenCalledWith(50);
+    fireEvent.pointerDown(cueEl, { clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cueEl, { clientY: 12, pointerId: 1 });
+    fireEvent.pointerUp(cueEl, { clientY: 12, pointerId: 1 });
+    expect(onShoot).toHaveBeenCalledTimes(1); // a tiny pull cancels
+    rerender(<PowerCue ready={false} onPower={onPower} onShoot={onShoot} />);
+    fireEvent.pointerDown(cueEl, { clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cueEl, { clientY: 200, pointerId: 1 });
+    fireEvent.pointerUp(cueEl, { clientY: 200, pointerId: 1 });
+    expect(onShoot).toHaveBeenCalledTimes(1); // not your shot
+  });
+
+  it('aim guide finds the first ball and the object direction, else the cushion', async () => {
+    const { aimGuide } = await import('../src/Board.js');
+    const balls = [
+      { id: 0, x: 100, y: 100 },
+      { id: 3, x: 300, y: 100 },
+    ];
+    const hit = aimGuide(balls, { x: 100, y: 100 }, 1, 0, 18, 1000, 500);
+    expect(hit.hit).toBe(3);
+    expect(hit.ghost.x).toBeCloseTo(264);
+    expect(hit.object).toEqual({ x: 1, y: 0 });
+    const miss = aimGuide(balls, { x: 100, y: 100 }, 0, 1, 18, 1000, 500);
+    expect(miss).toMatchObject({ hit: null, object: null });
+    expect(miss.ghost.y).toBeCloseTo(482);
   });
 
   it('ignores drags before the SVG has a size, and when it is not your turn', () => {
@@ -168,7 +222,8 @@ describe('PoolBoard', () => {
   });
 
   it('skips the replay under prefers-reduced-motion', () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    // Only the reduced-motion query matches (not the landscape "full table" query).
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduced-motion') }));
     const raf = vi.fn();
     vi.stubGlobal('requestAnimationFrame', raf);
     const { session, shooter } = freshSession();

@@ -151,12 +151,18 @@ export function Result({ view }: { view: MatchView }) {
       </Card>
 
       {Board && view.game && (
-        <details>
+        <details open={view.gameId === 'pool'}>
           <summary style={{ cursor: 'pointer', fontWeight: 700, minHeight: 44 }}>
             Final board
           </summary>
           <BoardFrame>
-            <Board view={view.game.view} you={view.you} canMove={false} onMove={() => undefined} />
+            <Board
+              view={view.game.view}
+              you={view.you}
+              canMove={false}
+              onMove={() => undefined}
+              mode="review"
+            />
           </BoardFrame>
         </details>
       )}

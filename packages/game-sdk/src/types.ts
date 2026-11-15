@@ -111,4 +111,6 @@ export interface BoardProps<View = unknown, Move = unknown> {
   readonly canMove: boolean;
   /** Send a move intent; the server validates it. */
   readonly onMove: (move: Move) => void;
+  /** `review`: a finished game shown on the result screen. No controls; may replay the last move. */
+  readonly mode?: 'play' | 'review';
 }
