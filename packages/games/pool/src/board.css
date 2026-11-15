@@ -76,6 +76,10 @@
   fill: var(--cc-ink, #161310);
 }
 
+.pool__eight-spot {
+  fill: var(--cc-white, #fff);
+}
+
 .pool__ball--outline {
   fill: none;
 }

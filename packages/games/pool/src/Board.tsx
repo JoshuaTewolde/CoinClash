@@ -48,7 +48,13 @@ function prefersReducedMotion(): boolean {
 /** One ball drawn at the origin; position it with a transform. */
 function BallGlyph({ id, r, clip }: { id: number; r: number; clip: string }) {
   if (id === 0) return <circle r={r} className="pool__ball pool__ball--cue" />;
-  if (id === 8) return <circle r={r} className="pool__ball pool__ball--eight" />;
+  if (id === 8)
+    return (
+      <g>
+        <circle r={r} className="pool__ball pool__ball--eight" />
+        <circle r={r * 0.42} className="pool__eight-spot" />
+      </g>
+    );
   const color = ballColor(id);
   if (groupOf(id) === 'solids') {
     return <circle r={r} className="pool__ball" style={{ fill: color }} />;
@@ -214,7 +220,7 @@ export function PoolBoard({ view, you, canMove, onMove }: BoardProps<PoolView, P
   })();
 
   return (
-    <div className="pool">
+    <div className="pool" data-shots={view.shots}>
       <p className="pool__status" aria-live="polite">
         <span className="pool__group">
           You: <strong>{groupLabel(myGroup)}</strong>
