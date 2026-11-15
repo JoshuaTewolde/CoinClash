@@ -1,0 +1,35 @@
+name: Regtest E2E
+
+# Real Breez/Spark regtest payment test. Manual only until Phase 5 lands.
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  regtest:
+    runs-on: ubuntu-latest
+    env:
+      NETWORK: regtest
+      BREEZ_API_KEY: ${{ secrets.BREEZ_API_KEY }}
+      ESCROW_MNEMONIC: ${{ secrets.REGTEST_ESCROW_MNEMONIC }}
+      REGTEST_PLAYER_A_MNEMONIC: ${{ secrets.REGTEST_PLAYER_A_MNEMONIC }}
+      REGTEST_PLAYER_B_MNEMONIC: ${{ secrets.REGTEST_PLAYER_B_MNEMONIC }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check secrets are configured
+        run: |
+          if [ -z "$BREEZ_API_KEY" ] || [ -z "$ESCROW_MNEMONIC" ]; then
+            echo "::error::BREEZ_API_KEY / REGTEST_ESCROW_MNEMONIC secrets are not set"; exit 1
+          fi
+      - name: Regtest payment test
+        run: echo "Regtest E2E test arrives in Phase 5 (pnpm --filter @coinclash/server test:regtest)"

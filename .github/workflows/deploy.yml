@@ -1,0 +1,28 @@
+name: Deploy
+
+# Deploys to Vultr after CI passes on main. Does nothing until DEPLOY_ENABLED=true
+# is set as a repository variable and the VULTR_* secrets exist. Real steps land in Phase 7.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy (placeholder)
+        env:
+          VULTR_HOST: ${{ secrets.VULTR_HOST }}
+          VULTR_USER: ${{ secrets.VULTR_USER }}
+          VULTR_SSH_KEY: ${{ secrets.VULTR_SSH_KEY }}
+        run: echo "Docker build + SSH deploy to $VULTR_HOST arrives in Phase 7"
