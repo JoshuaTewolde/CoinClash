@@ -1,64 +1,61 @@
-# CoinClash: Breez SDK write-up
+# A multiplayer game where players win and send bitcoin
 
-**Hack The Nest 2026 · Breez "Multiplayer Game Prizes" bounty**
-Live at [coinclash.vip](https://coinclash.vip) · built on `@breeztech/breez-sdk-spark` 0.28.4 (Spark, regtest)
+Built with the Breez SDK. Players win sats each round and send them to each other in one tap, straight to their own wallets.
 
-## What we built
+## How do I add bitcoin prizes to a multiplayer game?
 
-CoinClash lets friends play quick turn-based games against each other for sats. Right now there are five: tic-tac-toe, Connect 4, rock paper scissors, trivia and 8-ball pool. You sign up with a passkey, challenge a friend, both of you put up a stake, and whoever wins gets the whole pot the second the game ends. It runs in the browser as an installable web app, so the same thing works on Android and iPhone, which was the whole point for me, since I'm the one Android user who could never join my friends' iMessage games.
+In CoinClash, two friends each put up a stake before a game of Connect 4, pool, trivia, rock paper scissors or tic-tac-toe, and the winner takes the whole pot the moment the game ends. Our server's escrow wallet creates one Spark invoice per player with `receivePayment` (type `sparkInvoice`, locked to that player's wallet with `senderPublicKey`), watches for the deposits with `addEventListener`, and pays the winner with `prepareSendPayment` and `sendPayment`. Every payout carries an `idempotencyKey` built from the match and the player, so even if the server crashes mid-payout it finishes the job on restart and never pays twice.
 
-Every match moves real Breez payments: a welcome bonus when you sign up, two stake deposits, and a payout (or two refunds if it's a draw or the match is cancelled). Even with test sats, you get the full experience of sending and receiving money in one tap.
+## How can players send bitcoin to each other inside a game?
 
-## How we use the Breez SDK
+Every player gets their own Breez wallet, created from a passkey with `PasskeyClientBuilder` (fingerprint or face, no seed phrase), and paying a stake is a single "Pay 1,000 from wallet" tap that calls `prepareSendPayment` and `sendPayment` in the browser. The money then goes from the loser's stake to the winner's wallet over Spark in about a second, along with refunds when a match is a draw or cancelled. Players can also send sats to anyone straight from the Wallet screen. We first built this as direct player-to-player HTLC locks with our server acting only as a referee, but direct Spark HTLCs are disabled right now ([breez/spark-sdk#1123](https://github.com/breez/spark-sdk/issues/1123)), so stakes go through the escrow and the HTLC version waits in the code (`ESCROW_MODE=htlc`).
 
-We use both builds of the SDK: the WebAssembly build in the browser for each player's own wallet, and the Node build on our server for the escrow wallet and a "house" wallet.
+## How it works
 
-| What                            | Breez API                                                                                                                                                                       | Where   |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| Wallet with no seed phrase      | `PasskeyClientBuilder` + `PasskeyProvider`, `checkAvailability()`, `register()` / `signIn()`, then `connect()` with the derived seed                                            | Browser |
-| Logging in to our server        | `signMessage()` signs a one-time nonce in the browser; the server checks it with `checkMessage()` and uses `getInfo().identityPubkey` as the player's id                        | Both    |
-| Balance                         | `getInfo({ ensureSynced })`                                                                                                                                                     | Both    |
-| Stake deposits                  | The escrow creates one `receivePayment({ type: 'sparkInvoice', amount, expiryTime, senderPublicKey })` per player, so each invoice can only be paid by that player's own wallet | Server  |
-| Paying a stake                  | `prepareSendPayment()` + `sendPayment()` with a UUID `idempotencyKey`                                                                                                           | Browser |
-| Detecting deposits              | `addEventListener()` for `paymentSucceeded`, with `listPayments()` / `getPayment()` as a polling backup                                                                         | Server  |
-| Payouts, refunds, welcome bonus | `prepareSendPayment()` + `sendPayment()` to the player's Spark address, with an idempotency key derived from the match and player                                               | Server  |
-| Receiving                       | `receivePayment({ type: 'sparkAddress' })`, plus `bitcoinAddress` for faucet deposits                                                                                           | Browser |
-| Dollar values                   | `listFiatRates()` (shown next to the stake)                                                                                                                                     | Server  |
-| Non-custodial escrow (dormant)  | `sendPayment` with `htlcOptions`, `listPayments` filtered by `htlcStatus`, `claimHtlcPayment()`                                                                                 | Both    |
+- `connect({ config, seed, storageDir })` with `defaultConfig('regtest')`: opens a wallet (players in the browser, escrow and house wallets on the server)
+- `PasskeyClientBuilder` + `PasskeyProvider`, `checkAvailability()`, `register()`, `signIn()`: create or restore a player's wallet from their passkey
+- `signMessage()` / `checkMessage()`: wallet-signed login; the browser signs a nonce and the server verifies it
+- `getInfo()`: the player's identity pubkey and balance
+- `receivePayment({ type: 'sparkInvoice' })`: one deposit invoice per player per match, payable only by that player
+- `receivePayment({ type: 'sparkAddress' })` / `{ type: 'bitcoinAddress' }`: addresses for receiving, and for faucet deposits
+- `prepareSendPayment()` + `sendPayment({ idempotencyKey })`: paying stakes, payouts, refunds, the welcome bonus and wallet sends
+- `addEventListener()`: hears `paymentSucceeded` the instant a deposit lands
+- `listPayments()` / `getPayment()`: polling backup for deposits, and checking whether a payout already went out after a restart
+- `listFiatRates()`: the dollar value shown next to each stake
+- `sendPayment({ htlcOptions })`, `claimHtlcPayment()`: the non-custodial HTLC escrow, built and tested but switched off until #1123 is fixed
 
-## Design decisions around payments
+Where they are:
 
-**Paying exactly once.** The thing I worried about most was paying someone twice, or not at all, if the server crashed in the middle of a payout. Each match document in MongoDB carries its own little ledger of what it owes, and every payout uses an idempotency key built from the match id and the player (`payout:<match>:<player>`), hashed into the UUID format the SDK requires. On restart the server looks for unpaid entries, asks the SDK whether that key already went through, and only pays what's still missing. The welcome bonus works the same way with `bonus:<user>`.
+- `apps/web/src/wallet/breezWallet.ts`: the player's wallet in the browser (passkeys, paying, receiving, history, HTLC locks and claims)
+- `apps/server/src/breez.ts`: the server's escrow wallet (invoices, deposit detection, payouts) and signature checks
+- `apps/server/src/index.ts`: connects the escrow and house wallets, and reads the fiat rate
+- `apps/server/src/bonus.ts`: the welcome bonus paid from the house wallet
+- `apps/server/src/match/service.ts`: when deposits, payouts and refunds happen in a match
 
-**Invoices locked to a player.** Using `senderPublicKey` on the deposit invoices meant we never had to guess who paid what. If someone pays too little or too late, the escrow refunds it automatically.
+## Demo
 
-**Keeping ourselves out of the middle (the plan we couldn't ship).** Our original design never held anyone's money. Each player would lock their stake to their opponent with a Spark HTLC, and our server would act only as an oracle, revealing the preimage for the winner's side once the game was decided. If anything went wrong, the locks would just expire back to their owners. We built and tested the whole thing, but on the network every lock failed with `PermissionDenied`, because direct HTLCs between user wallets are currently disabled ([breez/spark-sdk#1123](https://github.com/breez/spark-sdk/issues/1123)). With the deadline coming, we switched to the custodial escrow described above, and added a public [escrow page](https://coinclash.vip/escrow) that shows what the escrow wallet holds against what it owes to every live match. The HTLC version is still in the code behind `ESCROW_MODE=htlc`, ready to turn back on.
+- Live: [coinclash.vip](https://coinclash.vip) (test sats; there's also a free practice mode, no account needed)
+- Short video, under one minute: [docs/media/demo-short.mp4](media/demo-short.mp4)
+- Escrow transparency page: [coinclash.vip/escrow](https://coinclash.vip/escrow)
 
-## What worked well
+## How to run it
 
-- **Passkey wallets are the best part of the SDK for us.** Signing up with a fingerprint and having a working Bitcoin wallet a few seconds later is the kind of onboarding a game needs. Nobody in our tests was asked to write anything down.
-- **Spark payments are fast.** Deposits and payouts land in about a second, which is what makes "the winner gets paid instantly" true.
-- **Sign/check message** gave us wallet-based login for free, with no passwords or email.
-- **Idempotency keys** made safe retries straightforward once we understood them.
-- **The same API in the browser and in Node** let us share a lot of code and mental model between the client and server.
+1. Install Node 22 or newer, and pnpm 9 (`corepack enable pnpm`).
+2. `git clone https://github.com/JoshuaTewolde/CoinClash.git && cd CoinClash && pnpm install`
+3. To try it with no keys at all: `NETWORK=mock MONGODB_URI=memory pnpm dev`, then open http://localhost:5173. Money moves on a simulated Spark network.
+4. For real Breez payments on regtest, copy `.env.example` to `.env`.
+5. Get a free Breez API key and put it in **both** `BREEZ_API_KEY` (server) and `VITE_BREEZ_API_KEY` (browser) in `.env`.
+6. Generate wallets for the server with `pnpm --filter @coinclash/server regtest mnemonic` (run it twice) and put them in `HOUSE_MNEMONIC` and `ESCROW_MNEMONIC`.
+7. Set `NETWORK=regtest`, `VITE_NETWORK=regtest`, a `SESSION_SECRET`, and a `MONGODB_URI` (or `memory`).
+8. Fund the house wallet from the regtest faucet: `pnpm --filter @coinclash/server regtest fund` prints its address.
+9. `pnpm dev`, then open http://localhost:5173. Passkeys are tied to the domain, so wallets made on localhost stay on localhost.
 
-## Problems we hit, and feedback
+More detail: [docs/testing-regtest.md](testing-regtest.md).
 
-1. **HTLCs between user wallets are disabled** (#1123). This was the big one, since it forced our whole design toward custody. If there's a timeline for re-enabling them, or a supported way to do conditional payments, we would switch back straight away.
-2. **`idempotencyKey` has to be a UUID.** That makes sense, but we first passed readable keys like `payout:abc:alice` and only found out from the error. A note in the docs, or accepting any string and hashing it, would help.
-3. **WebAssembly in Vite.** Vite's dependency pre-bundling broke the WASM load (it got served as HTML). Adding the package to `optimizeDeps.exclude` fixed it; a line about this in the web setup docs would have saved us an hour.
-4. **Passkeys are bound to the domain.** Wallets created on localhost or a temporary tunnel can't be opened on the real domain, so we picked coinclash.vip on day one. Worth calling out loudly in the passkey guide.
-5. **Some networks can't reach the Spark operators.** Our campus Wi-Fi couldn't resolve one operator's hostname, so payments silently failed from my laptop while working fine on mobile data. We added a check in the app that warns players when their network blocks a payment server. A clearer error from the SDK in this case would help other builders.
-6. **Regtest funding.** The faucet API needed a login we didn't have, so we fell back to the web faucet by hand. A simple funded test account or a CLI faucet would make CI easier.
-7. **Separate storage per wallet.** Running two wallets (escrow and house) in one Node process needs a separate `storageDir` for each, and one wallet needs to sync before it can spend. Obvious in hindsight, but it cost us a confusing "insufficient funds" error.
+## Team
 
-## Testing
+- Joshua Tewolde ([@JoshuaTewolde](https://github.com/JoshuaTewolde))
 
-All money code goes through one interface with an in-memory mock of the Spark network, so we could test failures on purpose: dropped payment events, duplicate events, failed payouts, and the same idempotency key being reused. On top of that we have more than 400 unit and integration tests, Playwright tests that drive two phones through a full match for every game, and a regtest test that signs up two players with Chrome's virtual passkey authenticator and plays a real staked match against the live site.
+---
 
-## What's next
-
-- Switch the HTLC escrow back on when #1123 is resolved, so CoinClash never holds stakes.
-- Mainnet, with Lightning deposits from any wallet and dollar amounts on every balance.
-- Group pots and tournaments for more than two players.
-- Opening the game plug-in interface so other developers can add their own games and get instant, escrowed payouts.
+Built at Hack The Nest 2026 for </time2build>. Licensed under MIT.
