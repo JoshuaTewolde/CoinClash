@@ -42,7 +42,8 @@ consume it directly, and the server's tsup build bundles it. There are no per-pa
 - **Server is the only source of truth.** Clients send intents; the server validates and applies them, then broadcasts `viewFor()`.
 - Game engines are pure and deterministic (seeded RNG only). There is no game code in payment logic and no payment code in games.
 - All money movement goes through the `PaymentRail` interface (`mock` | `regtest` | `mainnet`).
-  Game and escrow code never import the Breez SDK directly.
+  Game and match code never import the Breez SDK directly. The **server never holds match
+  funds**: it is only the result oracle that releases HTLC secret codes (ADR 0002).
 - `NETWORK=mock` is for tests, CI and offline UI dev only. It is **never** exposed to players.
 - Conventional Commits (`feat:`, `fix:`, `test:`, `ci:`, `docs:`, `chore:`), one logical change
   per commit.
@@ -64,9 +65,12 @@ Verify against https://sdk-doc-spark.breez.technology/ and `github.com/breez/spa
   `signIn`, `connectWithPasskey`. Each returns `wallet.seed` for `connect`. **Wallets are bound to rpId.**
 - Auth: `sdk.signMessage({ message, compact })` returns `{ pubkey, signature }`. The server verifies with
   `sdk.checkMessage({ message, pubkey, signature })`, which returns `{ isValid }`. Identity is `getInfo().identityPubkey`.
-- Deposits: one single-use `sparkInvoice` per deposit (`receivePayment({ paymentMethod: { type:
-'sparkInvoice', amount, description, expiryTime, senderPublicKey } })`). Match incoming payments by
-  `payment.details.invoiceDetails.invoice`. Mainnet: `bolt11Invoice`, matched by `details.invoice`.
+- **Match money = Spark HTLCs (ADR 0002).** Lock: `prepareSendPayment({ paymentRequest: { type:
+'input', input: <opponent spark address> }, amount })` then `sendPayment({ prepareResponse,
+options: { type: 'sparkAddress', htlcOptions: { paymentHash, expiryDurationSecs } } })`. The
+  incoming lock shows as a pending payment with `details.htlcDetails` (`paymentHash`, `expiryTime`,
+  status `waitingForPreimage`). Claim: `claimHtlcPayment({ preimage })`. Unclaimed locks return to
+  the sender at expiry. Preimages must be unique (the server generates them per match).
 - Events: `addEventListener({ onEvent })`, using `paymentSucceeded | paymentPending | paymentFailed | synced`.
   Backup polling: `listPayments({ typeFilter: ['receive'], fromTimestamp })`, `getPayment({ paymentId })`.
 - Send: `prepareSendPayment({ paymentRequest: { type: 'input', input }, amount })` gives the fee
@@ -78,21 +82,25 @@ Verify against https://sdk-doc-spark.breez.technology/ and `github.com/breez/spa
 
 Never commit secrets: no seeds, mnemonics, API keys or `.env` files. gitleaks runs in CI.
 `.env.example` documents every variable. `VITE_*` values are **public** (baked into the bundle).
-`ESCROW_MNEMONIC` and the server `BREEZ_API_KEY` live only on the server and in GitHub secrets.
+`HOUSE_MNEMONIC` (regtest welcome-bonus wallet) and the server `BREEZ_API_KEY` live only on the server and in GitHub secrets.
 
 GitHub Actions secrets (create when needed):
-`BREEZ_API_KEY`, `REGTEST_ESCROW_MNEMONIC`, `REGTEST_PLAYER_A_MNEMONIC`, `REGTEST_PLAYER_B_MNEMONIC`
+`BREEZ_API_KEY`, `REGTEST_HOUSE_MNEMONIC`, `REGTEST_PLAYER_A_MNEMONIC`, `REGTEST_PLAYER_B_MNEMONIC`
 (regtest.yml); `VULTR_HOST`, `VULTR_USER`, `VULTR_SSH_KEY` plus repo variable `DEPLOY_ENABLED=true`
-(deploy.yml).
+(deploy.yml); `MONGODB_URI` (deploy).
 
 ## Decisions log
+
+Full rationale and trade-offs: **`docs/decisions/`** (ADRs). Add a new ADR for every
+non-trivial design choice, and amend `docs/SPEC.md` with a pointer when an ADR changes the spec.
 
 - 2026-11-14: Spec kept at `docs/SPEC.md`. Repo `JoshuaTewolde/CoinClash` (public). Follow all
   spec phases in order with full test gates.
 - 2026-11-14: Vitest 2 workspace (`vitest.workspace.ts`) and root `vitest.config.ts` for coverage.
-- 2026-11-14: One server wallet serves as both escrow and house wallet; the ledger separates entry kinds.
+- 2026-11-14: **Secure mode = HTLC oracle escrow; Trusted Friend mode and custodial escrow removed** (ADR 0002).
+- 2026-11-14: One Breez API key for both browser and server for now (ADR 0005).
 - 2026-11-14: Browser target is **Chrome only** for now (desktop + Android). Passkeys use the
   two-button flow (Register / Sign in).
 - 2026-11-14: Production domain is **coinclash.vip** (passkey rpId `coinclash.vip`). Database is
   **MongoDB Atlas**; tests still use mongodb-memory-server.
-- Future work (don't build): Spark HTLC payments (`htlcOptions`) could enable non-custodial escrow.
+- Future work (don't build): encrypt HTLC preimages at rest; one-button passkey flow.

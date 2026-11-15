@@ -5,6 +5,17 @@
 
 ---
 
+## Amendments (read first)
+
+These override the sections below. Rationale lives in `docs/decisions/`.
+
+- **2026-11-14, [ADR 0002](decisions/0002-htlc-oracle-escrow.md):** §6 is replaced. There is **one payment mode, Secure**, implemented as **HTLC "oracle" escrow**. Players cross-lock Spark HTLCs to each other, and the server only releases the winner's secret code. The server never holds match funds. **Trusted Friend mode, server-held escrow, external-wallet deposits and the debts system are removed.** This affects §1, §5, §6, §7, §8, §11 and §12 as described in the ADR.
+- **2026-11-14, [ADR 0003](decisions/0003-chrome-only-passkeys.md):** Chrome only for now, two-button passkey flow (Create account / Sign in).
+- **2026-11-14, [ADR 0004](decisions/0004-hosting-and-database.md):** domain `coinclash.vip`, MongoDB Atlas.
+- **2026-11-14, [ADR 0006](decisions/0006-game-plugin-interface.md):** `GamePlugin` gains `maxMatchSeconds` and a timeout/cap result rule (needed for HTLC deadlines).
+
+---
+
 ## 0. Context and how to work
 
 You are building a hackathon project for **Hack The Nest 2026** (Eastern Michigan University), entered in the **Future of Money** track for the **Breez "Multiplayer Game Prizes" bounty**: *players win sats each round and send them to each other in one tap*, built on the **Breez SDK (Nodeless / Spark implementation)**. Hacking ends **Sunday Nov 15, 12:00 PM Eastern**. Ship a working core early and improve it; never leave `main` broken.
@@ -82,11 +93,15 @@ Chess and reaction-speed games are out of scope (chess may come later as a plug-
 
 ## 5. Stakes and negotiation
 
+> **Amended:** there is no payment-mode choice in negotiation (ADR 0002).
+
 - The challenger picks a game, a **payment mode** (section 6: Secure escrow by default, or Trusted Friend), and proposes a stake from **100 to 100,000 sats** (min/max configurable in env). The payment mode is part of the proposal; the opponent must agree to it too and can counter it.
 - The opponent can **Accept**, **Counter** with a different amount, or tap **"Take the lower"**, which accepts the lower of the last two proposals. Counters can go back and forth until someone accepts. Show the full proposal history in the challenge card.
 - Before paying, show each player exactly: stake, pot, estimated network fee (taken from the pot on payout), and the payout to the winner. No house fee.
 
 ## 6. Payment modes
+
+> **Amended:** superseded by [ADR 0002](decisions/0002-htlc-oracle-escrow.md). The text below is kept for history.
 
 Two modes, chosen per match during negotiation. **Secure is the default.** Both must run through the same `PaymentRail` abstraction and the same match state machine, with mode-specific branches.
 
@@ -142,7 +157,7 @@ Put all money movement behind one interface (e.g. `PaymentRail` with `createDepo
 1. **Home**: balance (sats, $ small), "New challenge", recent matches, friends/head-to-head records.
 2. **New challenge**: pick game → set stake → choose payment mode (Secure / Trusted Friend, with a one-line explanation of each) → share invite via the Web Share API (fallback: copy link).
 3. **Challenge card** (invite link landing): who challenged you, game, proposal history, Accept / Counter / Take the lower.
-4. **Deposit**: pay from in-app wallet (one tap) or external wallet (QR / open in wallet / copy). Live "waiting for opponent's deposit" status with the timeout countdown.
+4. **Deposit** (now **"Lock your stake"**, in-app wallet only, per ADR 0002): pay from in-app wallet (one tap) or external wallet (QR / open in wallet / copy). Live "waiting for opponent's deposit" status with the timeout countdown.
 5. **Game screen**: board, whose turn, turn timer, pot amount always visible.
 6. **Result**: winner, payout confirmation with payment status, Rematch button, share result.
 7. **Wallet**: balance, receive (faucet link on regtest), send, transaction history.
