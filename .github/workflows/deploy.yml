@@ -1,7 +1,8 @@
 name: Deploy
 
-# Deploys to Vultr after CI passes on main. Does nothing until DEPLOY_ENABLED=true
-# is set as a repository variable and the VULTR_* secrets exist. Real steps land in Phase 7.
+# After CI passes on main (or on manual dispatch): pull on the Vultr box and rebuild the stack.
+# Enabled by repository variable DEPLOY_ENABLED=true. Secrets: VULTR_HOST, VULTR_USER, VULTR_SSH_KEY.
+# Server layout (ADR 0004): /opt/coinclash/{app (git clone), .env (secrets), data (Breez state)}.
 on:
   workflow_run:
     workflows: [CI]
@@ -12,17 +13,37 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     if: >-
       vars.DEPLOY_ENABLED == 'true' &&
       (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - name: Deploy (placeholder)
+      - name: Deploy over SSH
         env:
-          VULTR_HOST: ${{ secrets.VULTR_HOST }}
-          VULTR_USER: ${{ secrets.VULTR_USER }}
-          VULTR_SSH_KEY: ${{ secrets.VULTR_SSH_KEY }}
-        run: echo "Docker build + SSH deploy to $VULTR_HOST arrives in Phase 7"
+          SSH_KEY: ${{ secrets.VULTR_SSH_KEY }}
+          HOST: ${{ secrets.VULTR_HOST }}
+          USER: ${{ secrets.VULTR_USER }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/key && chmod 600 ~/.ssh/key
+          ssh-keyscan -t ed25519 "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/key "$USER@$HOST" "set -e
+            cd /opt/coinclash/app
+            git fetch -q origin main && git checkout -q --detach $SHA
+            docker compose --env-file ../.env up -d --build --remove-orphans
+            docker image prune -f >/dev/null"
+      - name: Health check
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS https://coinclash.vip/health; then exit 0; fi
+            sleep 6
+          done
+          echo "::error::https://coinclash.vip/health did not come up"; exit 1

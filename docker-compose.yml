@@ -1,0 +1,31 @@
+# Production stack on the Vultr box (ADR 0004). Secrets live in /opt/coinclash/.env (never in git).
+services:
+  server:
+    build:
+      context: .
+      args:
+        VITE_BREEZ_API_KEY: ${VITE_BREEZ_API_KEY}
+    env_file: ../.env
+    restart: unless-stopped
+    volumes:
+      - ../data:/data
+    expose:
+      - '8787'
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

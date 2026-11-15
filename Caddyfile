@@ -1,0 +1,14 @@
+# TLS (Let's Encrypt) + reverse proxy. The Node server serves the web app, /api and /socket.io.
+coinclash.vip {
+	encode zstd gzip
+	reverse_proxy server:8787
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+www.coinclash.vip {
+	redir https://coinclash.vip{uri} permanent
+}
