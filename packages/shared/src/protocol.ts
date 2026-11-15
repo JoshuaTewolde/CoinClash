@@ -179,6 +179,8 @@ export interface PublicConfig {
   readonly stakeMin: number;
   readonly stakeMax: number;
   readonly games: readonly { id: string; name: string; turnModel: string }[];
+  /** Regtest welcome bonus for new players, or 0 when off. */
+  readonly welcomeBonusSats: number;
 }
 
 /** Public invite preview (`GET /api/invites/:code`). */

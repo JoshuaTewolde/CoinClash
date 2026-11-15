@@ -16,6 +16,7 @@ import { Server as SocketServer, type Socket } from 'socket.io';
 import { ZodError, type z } from 'zod';
 import { Auth, AuthError } from './auth.js';
 import type { ServerConfig } from './config.js';
+import type { WelcomeBonus } from './bonus.js';
 import { friendStats } from './friends.js';
 import { mockWalletRouter } from './mockWallet.js';
 import { MemoryMatchRepo, MemoryUserRepo, type MatchRepo, type UserRepo } from './db/repos.js';
@@ -25,6 +26,8 @@ import { MatchService } from './match/service.js';
 import { playersOf } from './match/types.js';
 
 export interface AppDeps {
+  /** Pays regtest welcome bonuses when set (NETWORK=regtest only). */
+  bonus?: WelcomeBonus;
   matches?: MatchRepo;
   users?: UserRepo;
   verifier?: SignatureVerifier;
@@ -41,7 +44,7 @@ export interface App {
   close(): Promise<void>;
 }
 
-/** Rejects everything: used until the Breez verifier lands (Phase 5) outside mock mode. */
+/** Rejects everything: fallback when no verifier is injected outside mock (index.ts injects Breez). */
 const unavailableVerifier: SignatureVerifier = { verify: async () => false };
 
 function userMessage(err: unknown): string {
@@ -70,6 +73,8 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
 
   const app = express();
   app.disable('x-powered-by');
+  // Behind Caddy in production: take the client IP from X-Forwarded-For (one hop).
+  app.set('trust proxy', 1);
   app.use(express.json({ limit: '32kb' }));
   const http = createServer(app);
   const io = new SocketServer<Record<string, never>, ServerEvents>(http, {
@@ -123,6 +128,7 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
       stakeMin: config.STAKE_MIN_SATS,
       stakeMax: config.STAKE_MAX_SATS,
       games: [...plugins.values()].map((g) => ({ id: g.id, name: g.name, turnModel: g.turnModel })),
+      welcomeBonusSats: config.NETWORK === 'mock' || deps.bonus ? config.WELCOME_BONUS_SATS : 0,
     };
     res.json(body);
   });
@@ -143,7 +149,10 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { token, user } = await auth.login(LoginRequestSchema.parse(req.body));
-      res.json({ token, user: { id: user._id, nickname: user.nickname } });
+      const bonus = deps.bonus
+        ? (await deps.bonus.grant(user._id, req.ip ?? 'unknown')).outcome
+        : 'none';
+      res.json({ token, user: { id: user._id, nickname: user.nickname }, bonus });
     } catch (err) {
       res.status(400).json({ ok: false, error: userMessage(err) });
     }

@@ -84,6 +84,7 @@ export function mockWalletRouter(opts: MockWalletOptions): { router: Router; net
           amount: l.amount,
           status: l.status,
           expiresAt: l.expiresAt,
+          kind: 'lock',
         }))
         .reverse();
     }),
