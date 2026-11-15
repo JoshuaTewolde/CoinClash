@@ -16,6 +16,14 @@
    (`NETWORK`). Players can't switch it, so test sats and real money never mix in one wallet.
    It shows TEST SATS (teal) on regtest and REAL MONEY (tomato) on mainnet.
 
+3. **The stake is typeable.** The stake number is a text input with `inputmode="numeric"` (numeric
+   keypad on phones). It keeps digits only, formats with separators, and clamps to
+   `STAKE_MIN_SATS`–`STAKE_MAX_SATS` on blur. The –/+ buttons and presets stay.
+4. **Each game has its own icon** in place of text glyphs. They're inline stroke SVGs in the Sticker
+   Arcade style (3px ink stroke, flat fills): a mini board (Tic-tac-toe), a rack with discs
+   (Connect 4), scissors, rock and paper (RPS), and a question bubble (Trivia). Labels always stay
+   visible next to the icon.
+
 ## Consequences
 
 - The server needs a per-friend stats query (streak, games played, per-game record) from
