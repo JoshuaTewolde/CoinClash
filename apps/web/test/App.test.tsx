@@ -12,6 +12,7 @@ const config: PublicConfig = {
   stakeMin: 100,
   stakeMax: 100_000,
   games: [{ id: 'tictactoe', name: 'Tic-tac-toe', turnModel: 'alternating' }],
+  welcomeBonusSats: 10_000,
 };
 
 /** A store already in a given phase, without network calls. */

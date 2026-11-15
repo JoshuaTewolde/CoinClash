@@ -36,7 +36,7 @@ export const api = {
   config: () => request<PublicConfig>('/api/config'),
   nonce: () => request<{ nonce: string }>('/api/auth/nonce', { method: 'POST' }),
   login: (body: LoginRequest) =>
-    request<{ token: string; user: SessionUser }>('/api/auth/login', {
+    request<{ token: string; user: SessionUser; bonus?: string }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(body),
     }),

@@ -1,10 +1,11 @@
 name: Regtest E2E
 
-# Real Breez/Spark regtest payment test. Manual only until Phase 5 lands.
+# Real Breez/Spark regtest HTLC test (ADR 0002): lock → find → wrong preimage rejected → claim.
+# Manual (and nightly) because it uses the real regtest network and shared test wallets.
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 6 * * *'
+  schedule:
+    - cron: '0 6 * * *'
 
 permissions:
   contents: read
@@ -28,8 +29,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Check secrets are configured
         run: |
-          if [ -z "$BREEZ_API_KEY" ] || [ -z "$HOUSE_MNEMONIC" ]; then
-            echo "::error::BREEZ_API_KEY / REGTEST_HOUSE_MNEMONIC secrets are not set"; exit 1
+          if [ -z "$BREEZ_API_KEY" ] || [ -z "$HOUSE_MNEMONIC" ] || [ -z "$REGTEST_PLAYER_A_MNEMONIC" ] || [ -z "$REGTEST_PLAYER_B_MNEMONIC" ]; then
+            echo "::error::BREEZ_API_KEY and REGTEST_{HOUSE,PLAYER_A,PLAYER_B}_MNEMONIC secrets must be set"; exit 1
           fi
-      - name: Regtest payment test
-        run: echo "Regtest E2E test arrives in Phase 5 (pnpm --filter @coinclash/server test:regtest)"
+      - name: Regtest HTLC smoke test
+        timeout-minutes: 15
+        run: pnpm --filter @coinclash/server regtest smoke

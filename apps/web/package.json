@@ -8,13 +8,16 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:regtest": "playwright test -c playwright.regtest.config.ts"
   },
   "dependencies": {
+    "@breeztech/breez-sdk-spark": "0.28.4",
     "@coinclash/game-sdk": "workspace:^",
     "@coinclash/game-tictactoe": "workspace:^",
     "@coinclash/rail": "workspace:^",
     "@coinclash/shared": "workspace:*",
+    "@noble/hashes": "^1.6.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "6.28.0",

@@ -32,6 +32,8 @@ export interface Snapshot {
   /** The player's network pick (ADR 0010). */
   readonly network: Network;
   readonly toast: string | null;
+  /** Nickname of the last account on this device, for the "Welcome back · Unlock" screen. */
+  readonly returning: string | null;
 }
 
 const SESSION_KEY = 'cc.session';
@@ -54,15 +56,17 @@ function save(key: string, value: unknown): void {
   }
 }
 
-function identityFor(network: Network): IdentityProvider {
+async function identityFor(network: Network): Promise<IdentityProvider> {
   if (network === 'mock') return mockIdentity;
-  // Breez passkey wallet arrives in Phase 5.
-  return {
-    register: () => Promise.reject(new Error('Wallet sign-up opens soon')),
-    signIn: () => Promise.reject(new Error('Wallet sign-in opens soon')),
-    restore: async () => null,
-    forget: () => undefined,
-  };
+  // Loaded on demand: keeps the Breez WASM out of the first paint and out of unit tests.
+  const { passkeyIdentity } = await import('../wallet/breezWallet');
+  const env = import.meta.env;
+  return passkeyIdentity({
+    network,
+    apiKey: env.VITE_BREEZ_API_KEY ?? '',
+    rpId: env.VITE_PASSKEY_RP_ID || window.location.hostname,
+    rpName: env.VITE_PASSKEY_RP_NAME || 'CoinClash',
+  });
 }
 
 export class Store {
@@ -77,6 +81,7 @@ export class Store {
     connected: false,
     network: load<Network>(NETWORK_KEY) ?? 'regtest',
     toast: null,
+    returning: null,
   };
   private readonly listeners = new Set<() => void>();
   private token: string | null = null;
@@ -85,6 +90,8 @@ export class Store {
   private agent: MatchAgent | null = null;
   private poll: ReturnType<typeof setInterval> | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private unwatchWallet: (() => void) | null = null;
+  private identityCache: { network: Network; provider: Promise<IdentityProvider> } | null = null;
 
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -97,8 +104,13 @@ export class Store {
     for (const l of this.listeners) l();
   }
 
-  private get identity(): IdentityProvider {
-    return identityFor(this.snap.config?.network ?? 'regtest');
+  /** The wallet backend for the picked network (mock in tests/dev, Breez passkeys otherwise). */
+  private identity(): Promise<IdentityProvider> {
+    const network = this.snap.network;
+    if (this.identityCache?.network !== network) {
+      this.identityCache = { network, provider: identityFor(network) };
+    }
+    return this.identityCache.provider;
   }
 
   // ---------- lifecycle ----------
@@ -110,9 +122,9 @@ export class Store {
         ? this.snap.network
         : config.network;
       this.set({ config, network: picked });
-      const wallet = await this.identity.restore();
       const saved = load<{ token: string; user: SessionUser }>(SESSION_KEY);
-      if (!wallet) return this.set({ phase: 'signedOut' });
+      const wallet = await (await this.identity()).restore();
+      if (!wallet) return this.set({ phase: 'signedOut', returning: saved?.user.nickname ?? null });
       if (saved && saved.user.id === (await wallet.identity())) {
         try {
           await api.me(saved.token);
@@ -129,35 +141,50 @@ export class Store {
 
   /** "Create account": new wallet + nickname. */
   async register(nickname: string): Promise<void> {
-    const wallet = await this.identity.register();
+    const wallet = await (await this.identity()).register();
     await this.login(wallet, nickname);
   }
 
-  /** "Sign in": restore this device's wallet. */
-  async signIn(): Promise<void> {
-    const wallet = await this.identity.signIn();
-    await this.login(wallet);
+  /**
+   * "Sign in": unlock this player's existing wallet. `nickname` is only needed if the server
+   * has never seen this wallet (e.g. it signed up against another server).
+   */
+  async signIn(nickname?: string): Promise<void> {
+    const wallet = await (await this.identity()).signIn();
+    await this.login(wallet, nickname || undefined);
   }
 
   signOut(): void {
     this.stop();
     save(SESSION_KEY, null);
-    this.identity.forget();
+    void this.identity().then((i) => i.forget());
+    void this.wallet?.disconnect?.();
     this.token = null;
     this.wallet = null;
-    this.set({ phase: 'signedOut', user: null, balance: null, matches: {}, friends: [] });
+    this.set({
+      phase: 'signedOut',
+      user: null,
+      balance: null,
+      matches: {},
+      friends: [],
+      returning: null,
+    });
   }
 
   private async login(wallet: AppWallet, nickname?: string): Promise<void> {
     const { nonce } = await api.nonce();
     const signed = await wallet.signMessage(signedMessages.login(nonce));
-    const { token, user } = await api.login({
+    const { token, user, bonus } = await api.login({
       nonce,
       signed,
       nickname,
       sparkAddress: await wallet.sparkAddress(),
     });
     await this.start(wallet, token, user);
+    if (bonus === 'sending') {
+      const amount = (this.snap.config?.welcomeBonusSats ?? 10_000).toLocaleString('en-US');
+      this.toast(`Welcome! ${amount} sats are on their way to your wallet.`);
+    }
   }
 
   private async start(wallet: AppWallet, token: string, user: SessionUser): Promise<void> {
@@ -187,12 +214,15 @@ export class Store {
       void this.agent?.onCode(c).then(() => this.refreshBalance());
     });
 
+    this.unwatchWallet = wallet.onChange?.(() => void this.refreshBalance()) ?? null;
     this.poll = setInterval(() => this.tick(), 1500);
     this.set({ phase: 'ready', user, error: null });
     await Promise.all([this.refreshBalance(), this.refreshFriends()]);
   }
 
   private stop(): void {
+    this.unwatchWallet?.();
+    this.unwatchWallet = null;
     this.socket?.close();
     this.socket = null;
     if (this.poll) clearInterval(this.poll);
@@ -255,6 +285,24 @@ export class Store {
 
   get hasFaucet(): boolean {
     return Boolean(this.wallet?.faucet);
+  }
+
+  get hasDepositAddress(): boolean {
+    return Boolean(this.wallet?.depositAddress);
+  }
+
+  get canSend(): boolean {
+    return Boolean(this.wallet?.send);
+  }
+
+  async depositAddress(): Promise<string> {
+    return (await this.wallet?.depositAddress?.()) ?? '';
+  }
+
+  async sendSats(destination: string, amount: number): Promise<void> {
+    if (!this.wallet?.send) throw new Error('Sending isn’t available');
+    await this.wallet.send(destination, amount);
+    await this.refreshBalance();
   }
 
   async walletAddress(): Promise<string> {
