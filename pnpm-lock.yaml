@@ -53,6 +53,9 @@ importers:
       '@coinclash/game-connect4':
         specifier: workspace:*
         version: link:../../packages/games/connect4
+      '@coinclash/game-pool':
+        specifier: workspace:*
+        version: link:../../packages/games/pool
       '@coinclash/game-rps':
         specifier: workspace:*
         version: link:../../packages/games/rps
@@ -114,6 +117,9 @@ importers:
       '@coinclash/game-connect4':
         specifier: workspace:^
         version: link:../../packages/games/connect4
+      '@coinclash/game-pool':
+        specifier: workspace:^
+        version: link:../../packages/games/pool
       '@coinclash/game-rps':
         specifier: workspace:^
         version: link:../../packages/games/rps
@@ -180,6 +186,28 @@ importers:
         version: 3.23.2
 
   packages/games/connect4:
+    dependencies:
+      '@coinclash/game-sdk':
+        specifier: workspace:*
+        version: link:../../game-sdk
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@types/react':
+        specifier: ^18.3.17
+        version: 18.3.31
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/games/pool:
     dependencies:
       '@coinclash/game-sdk':
         specifier: workspace:*

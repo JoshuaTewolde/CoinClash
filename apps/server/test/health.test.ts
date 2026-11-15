@@ -30,7 +30,7 @@ describe('server basics', () => {
       stakeMin: 100,
       stakeMax: 100000,
     });
-    expect(cfg.games).toHaveLength(4);
+    expect(cfg.games).toHaveLength(5);
     expect(cfg.games).toContainEqual({
       id: 'tictactoe',
       name: 'Tic-tac-toe',
@@ -47,6 +47,7 @@ describe('server basics', () => {
       turnModel: 'simultaneous',
     });
     expect(cfg.games).toContainEqual({ id: 'trivia', name: 'Trivia', turnModel: 'simultaneous' });
+    expect(cfg.games).toContainEqual({ id: 'pool', name: 'Pool', turnModel: 'alternating' });
   });
 
   it('rejects sockets without a valid token and accepts signed-in ones', async () => {

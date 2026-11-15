@@ -1,0 +1,205 @@
+/* Pool board. Uses the web app's Sticker Arcade tokens (apps/web/src/design/tokens.css). */
+.pool {
+  /* No felt-green token exists; this is the one board-local colour. */
+  --pool-felt: var(--cc-felt, #2e9e6b);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-3, 12px);
+  width: 100%;
+  font-family: var(--cc-font-body, sans-serif);
+  color: var(--cc-ink, #161310);
+}
+
+.pool__status {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--cc-space-2, 8px);
+  font-size: var(--cc-text-sm, 0.9375rem);
+}
+
+.pool__table {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pool__table--ready {
+  cursor: crosshair;
+}
+
+.pool__rail {
+  fill: var(--cc-ink-soft, #4a433b);
+  stroke: var(--cc-ink, #161310);
+  stroke-width: 6;
+}
+
+.pool__felt {
+  fill: var(--pool-felt);
+  stroke: var(--cc-ink, #161310);
+  stroke-width: 5;
+}
+
+.pool__diamond {
+  fill: var(--cc-paper, #fff8ec);
+}
+
+.pool__headline {
+  stroke: var(--cc-paper, #fff8ec);
+  stroke-opacity: 0.35;
+  stroke-width: 2;
+  stroke-dasharray: 6 8;
+}
+
+.pool__pocket {
+  fill: var(--cc-ink, #161310);
+  stroke: var(--cc-ink, #161310);
+  stroke-width: 4;
+}
+
+.pool__ball,
+.pool__ball-base {
+  stroke: var(--cc-ink, #161310);
+  stroke-width: 4;
+}
+
+.pool__ball-base,
+.pool__ball--cue {
+  fill: var(--cc-white, #fff);
+}
+
+.pool__ball--eight {
+  fill: var(--cc-ink, #161310);
+}
+
+.pool__eight-spot {
+  fill: var(--cc-white, #fff);
+}
+
+.pool__ball--outline {
+  fill: none;
+}
+
+.pool__guide {
+  stroke: var(--cc-white, #fff);
+  stroke-width: 4;
+  stroke-dasharray: 10 10;
+  stroke-linecap: round;
+}
+
+.pool__stick {
+  stroke: var(--cc-sunflower, #ffc93c);
+  stroke-width: 10;
+  stroke-linecap: round;
+  filter: drop-shadow(3px 3px 0 var(--cc-ink, #161310));
+}
+
+.pool__racks {
+  display: grid;
+  gap: var(--cc-space-1, 4px);
+}
+
+.pool__rack {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cc-space-2, 8px);
+  font-size: var(--cc-text-xs, 0.8125rem);
+}
+
+.pool__rack-label {
+  font-weight: 700;
+}
+
+.pool__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-height: 20px;
+}
+
+.pool__chip {
+  width: 20px;
+  height: 20px;
+}
+
+.pool__none {
+  color: var(--cc-ink-soft, #4a433b);
+}
+
+.pool__controls {
+  display: grid;
+  gap: var(--cc-space-3, 12px);
+}
+
+.pool__field {
+  display: grid;
+  gap: var(--cc-space-1, 4px);
+  font-size: var(--cc-text-sm, 0.9375rem);
+}
+
+.pool__field input[type='range'] {
+  width: 100%;
+  min-height: var(--cc-touch-min, 44px);
+  accent-color: var(--cc-teal, #1fb5a8);
+}
+
+.pool__nudge {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--cc-space-2, 8px);
+}
+
+.pool__meter {
+  height: 14px;
+  border: var(--cc-outline, 3px solid #161310);
+  border-radius: var(--cc-radius-pill, 999px);
+  background: var(--cc-white, #fff);
+  overflow: hidden;
+}
+
+.pool__meter-fill {
+  height: 100%;
+  background: var(--cc-tomato, #ff5a3c);
+}
+
+.pool__btn {
+  min-width: var(--cc-touch-min, 44px);
+  min-height: var(--cc-touch-min, 44px);
+  border: var(--cc-outline, 3px solid #161310);
+  border-radius: var(--cc-radius-md, 14px);
+  background: var(--cc-white, #fff);
+  box-shadow: var(--cc-shadow-pressed, 1px 1px 0 #161310);
+  font: inherit;
+  font-size: var(--cc-text-lg, 1.375rem);
+  font-weight: 700;
+  color: var(--cc-ink, #161310);
+  cursor: pointer;
+  transition: transform var(--cc-press-ms, 90ms);
+}
+
+.pool__btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+}
+
+.pool__btn:focus-visible {
+  outline: 3px solid var(--cc-teal, #1fb5a8);
+  outline-offset: 2px;
+}
+
+.pool__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pool__btn--shoot {
+  width: 100%;
+  background: var(--cc-sunflower, #ffc93c);
+  box-shadow: var(--cc-shadow, 5px 5px 0 #161310);
+  font-family: var(--cc-font-display, sans-serif);
+}

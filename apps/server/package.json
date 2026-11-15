@@ -15,6 +15,7 @@
     "@coinclash/game-connect4": "workspace:*",
     "@coinclash/game-rps": "workspace:*",
     "@coinclash/game-sdk": "workspace:*",
+    "@coinclash/game-pool": "workspace:*",
     "@coinclash/game-tictactoe": "workspace:*",
     "@coinclash/game-trivia": "workspace:*",
     "@coinclash/rail": "workspace:*",
