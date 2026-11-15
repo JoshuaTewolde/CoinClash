@@ -91,4 +91,8 @@ GitHub Actions secrets (create when needed):
   spec phases in order with full test gates.
 - 2026-11-14: Vitest 2 workspace (`vitest.workspace.ts`) and root `vitest.config.ts` for coverage.
 - 2026-11-14: One server wallet serves as both escrow and house wallet; the ledger separates entry kinds.
+- 2026-11-14: Browser target is **Chrome only** for now (desktop + Android). Passkeys use the
+  two-button flow (Register / Sign in).
+- 2026-11-14: Production domain is **coinclash.vip** (passkey rpId `coinclash.vip`). Database is
+  **MongoDB Atlas**; tests still use mongodb-memory-server.
 - Future work (don't build): Spark HTLC payments (`htlcOptions`) could enable non-custodial escrow.
