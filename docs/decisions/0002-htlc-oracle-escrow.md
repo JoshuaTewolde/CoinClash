@@ -122,6 +122,16 @@ crash. On boot, the server reconciles: it resumes timers and re-sends released c
 7. **Simpler code.** The match flow has no payout queue, refund queue or debts collection. The
    ledger becomes an audit log of locks, released codes and claims.
 
+8. **The winner's own stake comes back late** (found while designing the Result screen). The
+   winner claims the loser's stake immediately. But the winner's own lock is tied to the
+   _loser's_ code, which is never released, so it only returns at its expiry. A Spark HTLC can't be
+   cancelled by its sender, and releasing the loser's code would hand the winner's stake to the
+   loser. The net result is correct, just delayed: +stake now, own stake back at the deadline.
+   Mitigations: keep deadlines short (honest `maxMatchSeconds`, a modest claim window), and show
+   "Your own 3,000 unlocks back to you at HH:MM" on the result screen and in the wallet as a
+   pending incoming amount. Draws don't have this problem, because both codes are released and
+   both sides claim at once.
+
 ## What else changes in the spec
 
 - §5: the payment mode is no longer part of the proposal. The pre-lock summary shows stake,
