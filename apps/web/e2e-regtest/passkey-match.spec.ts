@@ -26,10 +26,11 @@ async function phone(context: BrowserContext): Promise<Page> {
   return page;
 }
 
-async function signUp(page: Page, nickname: string) {
+async function signUp(page: Page, nickname: string, landsOnHome = true) {
   await page.getByLabel('Nickname').fill(nickname);
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByLabel('Your wallet')).toBeVisible();
+  // From an invite link, sign-up lands on the challenge instead of Home.
+  if (landsOnHome) await expect(page.getByLabel('Your wallet')).toBeVisible();
 }
 
 async function walletSats(page: Page): Promise<number> {
@@ -71,17 +72,25 @@ test('passkey wallets play a staked match on regtest', async ({ browser }) => {
   const link = (await alice.getByTestId('invite-link').textContent())!.trim();
 
   await bob.goto(new URL(link).pathname);
-  await signUp(bob, 'Bob');
-  await expect(bob.getByRole('button', { name: 'Accept 500' })).toBeVisible();
-  await bob.goto('/');
-  await expect.poll(() => walletSats(bob), { timeout: 180_000 }).toBeGreaterThanOrEqual(10_000);
-  const [a0, b0] = [await walletSats(alice), await walletSats(bob)];
-
-  await bob.goto(new URL(link).pathname);
+  await signUp(bob, 'Bob', false);
   await bob.getByRole('button', { name: 'Accept 500' }).click();
+
+  // Both are on "Pay your stake", which shows the wallet balance. (No page reloads: a reload
+  // would need a passkey tap to unlock the wallet again.) Wait for Bob's welcome bonus.
+  const payScreenSats = async (p: Page) =>
+    Number(((await p.getByText(/^Wallet balance/).textContent()) ?? '').replace(/[^0-9]/g, ''));
+  await expect.poll(() => payScreenSats(bob), { timeout: 180_000 }).toBeGreaterThanOrEqual(10_000);
+  const [a0, b0] = [await payScreenSats(alice), await payScreenSats(bob)];
 
   for (const p of [alice, bob]) {
     await p.getByRole('button', { name: 'Pay 500 from wallet' }).click();
+  }
+  for (const [name, p] of [
+    ['alice', alice],
+    ['bob', bob],
+  ] as const) {
+    await p.waitForTimeout(5000);
+    console.warn(`[${name}] alerts:`, await p.getByRole('alert').allTextContents());
   }
   await expect(alice.getByRole('grid', { name: 'Tic-tac-toe board' })).toBeVisible({
     timeout: 180_000,

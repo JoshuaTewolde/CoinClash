@@ -192,6 +192,21 @@ describe('MatchAgent', () => {
     expect(net.balanceOf('alice')).toBe(4000);
     expect(net.balanceOf(escrow.id)).toBe(1000);
     expect(sent).toContain('match:paid');
+    // The opponent paying their own invoice in the same match must not collide on the key.
+    net.wallet('bob', 5000);
+    const bobInvoice = await escrow.createInvoice({
+      amount: 1000,
+      expiresAt: T + 600,
+      payerIdentity: 'bob',
+      memo: 'm',
+    });
+    const bobAgent = new MatchAgent({ wallet: net.wallet('bob'), send: async () => undefined });
+    await bobAgent.payDeposit({
+      ...v,
+      you: 'bob',
+      escrow: { ...v.escrow!, yourInvoice: bobInvoice },
+    });
+    expect(net.balanceOf(escrow.id)).toBe(2000);
     await agent.payDeposit({ ...v, escrow: { ...v.escrow!, paid: { alice: true, bob: false } } });
     await expect(agent.payDeposit({ ...v, status: 'IN_PROGRESS' })).rejects.toThrow(
       /Nothing to pay/,

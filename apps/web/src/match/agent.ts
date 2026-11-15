@@ -58,7 +58,8 @@ export class MatchAgent {
     }
     if (escrow.paid[view.you]) return;
     if (!escrow.yourInvoice) throw new Error('Getting your payment ready… try again in a second');
-    const key = `deposit:${view.id}`;
+    // Spark transfer ids (= idempotency keys) are unique network-wide: include the payer.
+    const key = `deposit:${view.id}:${view.you}`;
     if (this.inflight.has(key)) return;
     this.inflight.add(key);
     try {

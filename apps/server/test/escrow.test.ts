@@ -266,8 +266,10 @@ describe('escrow service (mock escrow)', () => {
     try {
       const doc = await toDeposits(service);
       expect(doc.mode).toBe('escrow');
-      await net.wallet('alice').payInvoice(doc.deposits.alice!.invoice!, `deposit:${doc._id}`);
-      await net.wallet('bob').payInvoice(doc.deposits.bob!.invoice!, `deposit:${doc._id}`);
+      await net
+        .wallet('alice')
+        .payInvoice(doc.deposits.alice!.invoice!, `deposit:${doc._id}:alice`);
+      await net.wallet('bob').payInvoice(doc.deposits.bob!.invoice!, `deposit:${doc._id}:bob`);
       const playing = await until(async () => {
         const d = await service.get(doc._id);
         return d.status === 'IN_PROGRESS' ? d : null;

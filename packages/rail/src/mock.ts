@@ -78,6 +78,13 @@ export class MockNetwork {
   };
   private readonly invoices = new Map<string, Invoice>();
   private readonly keyed = new Map<string, { paymentId: string; status: 'completed' | 'failed' }>();
+  /** Like Spark: an idempotency key is a transfer id, unique across the whole network. */
+  private readonly keyOwner = new Map<string, string>();
+  private claimKey(from: string, key: string): void {
+    const owner = this.keyOwner.get(key);
+    if (owner !== undefined && owner !== from) throw new Error(`transfer ${key} already exists`);
+    this.keyOwner.set(key, from);
+  }
   private readonly invoiceListeners = new Map<string, Set<(p: InvoicePayment) => void>>();
   private readonly balances = new Map<string, Sats>();
   private readonly htlcs: Htlc[] = [];
@@ -178,6 +185,7 @@ export class MockNetwork {
 
   /** @internal Pay an invoice. Idempotent per (payer, key). */
   payInvoice(from: string, invoice: string, key: string): { paymentId: string } {
+    this.claimKey(from, key);
     const k = `${from}
 ${key}`;
     const done = this.keyed.get(k);
@@ -221,6 +229,7 @@ ${key}`;
 
   /** @internal Plain transfer, idempotent per (sender, key). */
   send(from: string, to: string, amount: Sats, key: string): { paymentId: string } {
+    this.claimKey(from, key);
     const k = `${from}
 ${key}`;
     const done = this.keyed.get(k);

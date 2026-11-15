@@ -193,6 +193,28 @@ describe('mock escrow (invoices, keyed payouts)', () => {
     await expect(alice.payInvoice('nope', 'n')).rejects.toThrow(/Unknown invoice/);
   });
 
+  it('treats idempotency keys as network-wide transfer ids, like Spark', async () => {
+    const net = new MockNetwork(() => 0);
+    const { MockEscrow } = await import('../src/mock.js');
+    const escrow = new MockEscrow(net);
+    net.wallet('alice', 100);
+    net.wallet('bob', 100);
+    const ia = await escrow.createInvoice({
+      amount: 1,
+      expiresAt: 10,
+      payerIdentity: 'alice',
+      memo: '',
+    });
+    const ib = await escrow.createInvoice({
+      amount: 1,
+      expiresAt: 10,
+      payerIdentity: 'bob',
+      memo: '',
+    });
+    await net.wallet('alice').payInvoice(ia, 'deposit:m1');
+    await expect(net.wallet('bob').payInvoice(ib, 'deposit:m1')).rejects.toThrow(/already exists/);
+  });
+
   it('can drop or duplicate invoice events', async () => {
     const net = new MockNetwork(() => 0);
     const { MockEscrow } = await import('../src/mock.js');
