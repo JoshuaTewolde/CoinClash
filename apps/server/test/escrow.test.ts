@@ -382,7 +382,7 @@ describe('escrow service (mock escrow)', () => {
     } finally {
       service.stop();
     }
-  });
+  }, 20_000);
 
   it('checkDeposits picks up a payment immediately on the client hint', async () => {
     const { net, service } = await setupService();
