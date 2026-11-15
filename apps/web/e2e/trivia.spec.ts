@@ -47,7 +47,7 @@ test('full trivia match between two phones', async ({ browser }) => {
   await bob.getByRole('button', { name: 'Accept 1,000' }).click();
 
   for (const p of [alice, bob]) {
-    await p.getByRole('button', { name: 'Lock 1,000 from wallet' }).click();
+    await p.getByRole('button', { name: 'Pay 1,000 from wallet' }).click();
   }
   for (const p of [alice, bob]) {
     await expect(p.getByRole('group', { name: 'Answer options' })).toBeVisible();

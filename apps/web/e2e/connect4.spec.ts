@@ -64,7 +64,7 @@ test('full Connect 4 match between two phones', async ({ browser }) => {
 
   // Both lock 1,000; the game starts once each wallet sees the other's lock.
   for (const p of [alice, bob]) {
-    await p.getByRole('button', { name: 'Lock 1,000 from wallet' }).click();
+    await p.getByRole('button', { name: 'Pay 1,000 from wallet' }).click();
   }
   await expect(alice.getByRole('grid', { name: 'Connect 4 board' })).toBeVisible();
   await expect(bob.getByRole('grid', { name: 'Connect 4 board' })).toBeVisible();
@@ -80,6 +80,6 @@ test('full Connect 4 match between two phones', async ({ browser }) => {
   const second = first === alice ? bob : alice;
 
   await expect(first.getByRole('heading', { name: 'You won!' })).toBeVisible();
-  await expect(first.getByTestId('payout-status')).toHaveText(/Collected .*1,000 sats/);
+  await expect(first.getByTestId('payout-status')).toHaveText(/Paid \+2,000 sats/);
   await expect(second.getByRole('heading', { name: /won$/ })).toBeVisible();
 });

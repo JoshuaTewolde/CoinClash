@@ -35,7 +35,7 @@ test('full rock paper scissors match between two phones', async ({ browser }) =>
   await bob.getByRole('button', { name: 'Accept 1,000' }).click();
 
   for (const p of [alice, bob]) {
-    await p.getByRole('button', { name: 'Lock 1,000 from wallet' }).click();
+    await p.getByRole('button', { name: 'Pay 1,000 from wallet' }).click();
   }
   for (const p of [alice, bob]) {
     await expect(p.getByRole('group', { name: 'Rock Paper Scissors board' })).toBeVisible();
@@ -58,6 +58,6 @@ test('full rock paper scissors match between two phones', async ({ browser }) =>
   }
 
   await expect(alice.getByRole('heading', { name: 'You won!' })).toBeVisible();
-  await expect(alice.getByTestId('payout-status')).toHaveText(/Collected .*1,000 sats/);
+  await expect(alice.getByTestId('payout-status')).toHaveText(/Paid \+2,000 sats/);
   await expect(bob.getByRole('heading', { name: /won$/ })).toBeVisible();
 });
