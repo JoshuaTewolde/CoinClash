@@ -1,7 +1,7 @@
 /**
  * Two phones on real Spark regtest: passkey sign-up (virtual authenticator with PRF), welcome
- * bonus from the house wallet, challenge → take the lower → both lock real HTLCs → play → the
- * winner claims with the released code. Balances are checked from each player's own wallet.
+ * bonus from the house wallet, challenge → accept → both pay real stakes into the escrow → play →
+ * the escrow pays the winner the whole pot. Balances are checked from each player's own wallet.
  */
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
@@ -81,7 +81,7 @@ test('passkey wallets play a staked match on regtest', async ({ browser }) => {
   await bob.getByRole('button', { name: 'Accept 500' }).click();
 
   for (const p of [alice, bob]) {
-    await p.getByRole('button', { name: 'Lock 500 from wallet' }).click();
+    await p.getByRole('button', { name: 'Pay 500 from wallet' }).click();
   }
   await expect(alice.getByRole('grid', { name: 'Tic-tac-toe board' })).toBeVisible({
     timeout: 180_000,
@@ -93,12 +93,14 @@ test('passkey wallets play a staked match on regtest', async ({ browser }) => {
   const second = first === alice ? bob : alice;
 
   await expect(first.getByRole('heading', { name: 'You won!' })).toBeVisible();
-  await expect(first.getByTestId('payout-status')).toHaveText(/Collected/, { timeout: 180_000 });
+  await expect(first.getByTestId('payout-status')).toHaveText(/Paid \+1,000 sats/, {
+    timeout: 180_000,
+  });
 
-  // Winner: +500 from the loser's lock (own 500 still locked until expiry). Loser: −500.
+  // Escrow (ADR 0013): the winner gets the whole 1,000 pot instantly (+500 net). Loser: −500.
   const [w0, l0] = first === alice ? [a0, b0] : [b0, a0];
   await first.getByRole('link', { name: 'Home' }).click();
   await second.getByRole('link', { name: 'Home' }).click();
-  await expect.poll(() => walletSats(first), { timeout: 120_000 }).toBe(w0);
+  await expect.poll(() => walletSats(first), { timeout: 120_000 }).toBe(w0 + 500);
   await expect.poll(() => walletSats(second), { timeout: 120_000 }).toBe(l0 - 500);
 });
