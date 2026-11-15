@@ -60,6 +60,43 @@ export interface WalletRail {
   onIncomingLock(listener: (lock: IncomingLock) => void): () => void;
   /** Claim an incoming HTLC by revealing its preimage. */
   claim(preimage: string): Promise<{ paymentId: string; amount: Sats }>;
+  /**
+   * Pay an escrow deposit invoice (ADR 0013). `idempotencyKey` is a logical key such as
+   * `deposit:<matchId>`; paying twice with the same key sends once.
+   */
+  payInvoice(invoice: string, idempotencyKey: string): Promise<{ paymentId: string }>;
+}
+
+/** A payment the escrow wallet received against one of its invoices. */
+export interface InvoicePayment {
+  readonly invoice: string;
+  readonly paymentId: string;
+  readonly amount: Sats;
+}
+
+/**
+ * The server's escrow wallet (ADR 0013: custodial escrow is the active mode). It issues one
+ * single-use invoice per player per match, detects deposits, and pays winners and refunds.
+ */
+export interface EscrowRail {
+  /** Invoice for exactly `amount`, payable only by `payerIdentity`, expiring at `expiresAt` (Unix s). */
+  createInvoice(req: {
+    amount: Sats;
+    expiresAt: number;
+    payerIdentity: string;
+    memo: string;
+  }): Promise<string>;
+  /** Polling backup for events: the payment received for `invoice`, if any. */
+  findInvoicePayment(invoice: string): Promise<InvoicePayment | null>;
+  /** Subscribe to received invoice payments. Returns an unsubscribe function. */
+  onInvoicePaid(listener: (p: InvoicePayment) => void): () => void;
+  /**
+   * Pay `amount` to a Spark address. The same `idempotencyKey` never pays twice, even across
+   * restarts. Resolves with the payment id; rejects if the payment failed.
+   */
+  pay(to: string, amount: Sats, idempotencyKey: string): Promise<{ paymentId: string }>;
+  /** Did the payment with this logical key already go out? (reconcile after a crash) */
+  paymentStatus(idempotencyKey: string): Promise<'completed' | 'pending' | 'failed' | null>;
 }
 
 export interface SignatureVerifier {

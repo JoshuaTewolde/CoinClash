@@ -9,7 +9,9 @@ import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import {
   paymentHashOf,
+  type EscrowRail,
   type IncomingLock,
+  type InvoicePayment,
   type LockRequest,
   type Sats,
   type SignatureVerifier,
@@ -28,6 +30,20 @@ export interface MockFaults {
   lockEventDelayMs: number;
   /** Flat fee charged per lock. */
   lockFee: Sats;
+  /** Escrow payouts (`send`) reject with an error. */
+  failPayouts: boolean;
+  /** Invoice-paid events are never delivered (polling must recover them). */
+  dropInvoiceEvents: boolean;
+  /** Invoice-paid events are delivered twice. */
+  duplicateInvoiceEvents: boolean;
+}
+
+interface Invoice {
+  to: string;
+  amount: Sats;
+  expiresAt: number;
+  payer: string;
+  paid: { paymentId: string; from: string } | null;
 }
 
 interface Htlc {
@@ -56,7 +72,13 @@ export class MockNetwork {
     failClaims: false,
     lockEventDelayMs: 0,
     lockFee: 0,
+    failPayouts: false,
+    dropInvoiceEvents: false,
+    duplicateInvoiceEvents: false,
   };
+  private readonly invoices = new Map<string, Invoice>();
+  private readonly keyed = new Map<string, { paymentId: string; status: 'completed' | 'failed' }>();
+  private readonly invoiceListeners = new Map<string, Set<(p: InvoicePayment) => void>>();
   private readonly balances = new Map<string, Sats>();
   private readonly htlcs: Htlc[] = [];
   private readonly listeners = new Map<string, Set<(lock: IncomingLock) => void>>();
@@ -147,6 +169,84 @@ export class MockNetwork {
   }
 
   /** @internal */
+  createInvoice(to: string, amount: Sats, expiresAt: number, payer: string): string {
+    if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid amount');
+    const invoice = `mockinv-${++this.seq}-${to}`;
+    this.invoices.set(invoice, { to, amount, expiresAt, payer, paid: null });
+    return invoice;
+  }
+
+  /** @internal Pay an invoice. Idempotent per (payer, key). */
+  payInvoice(from: string, invoice: string, key: string): { paymentId: string } {
+    const k = `${from}
+${key}`;
+    const done = this.keyed.get(k);
+    if (done?.status === 'completed') return { paymentId: done.paymentId };
+    const inv = this.invoices.get(invoice);
+    if (!inv) throw new Error('Unknown invoice');
+    if (inv.paid) throw new Error('Invoice already paid');
+    if (this.now() >= inv.expiresAt) throw new Error('Invoice expired');
+    if (inv.payer !== from) throw new Error('This invoice is for another payer');
+    if (this.balanceOf(from) < inv.amount) throw new Error('Insufficient funds');
+    this.balances.set(from, this.balanceOf(from) - inv.amount);
+    this.balances.set(inv.to, this.balanceOf(inv.to) + inv.amount);
+    const paymentId = `mockpay-${++this.seq}`;
+    inv.paid = { paymentId, from };
+    this.keyed.set(k, { paymentId, status: 'completed' });
+    if (!this.faults.dropInvoiceEvents) {
+      const event: InvoicePayment = { invoice, paymentId, amount: inv.amount };
+      const times = this.faults.duplicateInvoiceEvents ? 2 : 1;
+      queueMicrotask(() => {
+        for (let i = 0; i < times; i++)
+          for (const l of this.invoiceListeners.get(inv.to) ?? []) l(event);
+      });
+    }
+    return { paymentId };
+  }
+
+  /** @internal */
+  findInvoicePayment(to: string, invoice: string): InvoicePayment | null {
+    const inv = this.invoices.get(invoice);
+    if (!inv || inv.to !== to || !inv.paid) return null;
+    return { invoice, paymentId: inv.paid.paymentId, amount: inv.amount };
+  }
+
+  /** @internal */
+  subscribeInvoices(to: string, listener: (p: InvoicePayment) => void): () => void {
+    const set = this.invoiceListeners.get(to) ?? new Set();
+    set.add(listener);
+    this.invoiceListeners.set(to, set);
+    return () => set.delete(listener);
+  }
+
+  /** @internal Plain transfer, idempotent per (sender, key). */
+  send(from: string, to: string, amount: Sats, key: string): { paymentId: string } {
+    const k = `${from}
+${key}`;
+    const done = this.keyed.get(k);
+    if (done?.status === 'completed') return { paymentId: done.paymentId };
+    if (this.faults.failPayouts) {
+      this.keyed.set(k, { paymentId: `mockfail-${++this.seq}`, status: 'failed' });
+      throw new Error('Payout failed (injected fault)');
+    }
+    if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid amount');
+    if (this.balanceOf(from) < amount) throw new Error('Insufficient funds');
+    this.balances.set(from, this.balanceOf(from) - amount);
+    this.balances.set(to, this.balanceOf(to) + amount);
+    const paymentId = `mockpay-${++this.seq}`;
+    this.keyed.set(k, { paymentId, status: 'completed' });
+    return { paymentId };
+  }
+
+  /** @internal */
+  keyedStatus(from: string, key: string): 'completed' | 'failed' | null {
+    return (
+      this.keyed.get(`${from}
+${key}`)?.status ?? null
+    );
+  }
+
+  /** @internal */
   claim(to: string, preimage: string): { paymentId: string; amount: Sats } {
     if (this.faults.failClaims) throw new Error('Claim failed (injected fault)');
     this.expire();
@@ -197,4 +297,30 @@ export class MockWallet implements WalletRail {
   onIncomingLock = (listener: (lock: IncomingLock) => void) =>
     this.network.subscribe(this.id, listener);
   claim = async (preimage: string) => this.network.claim(this.id, preimage);
+  payInvoice = async (invoice: string, idempotencyKey: string) =>
+    this.network.payInvoice(this.id, invoice, idempotencyKey);
+}
+
+/** Escrow wallet on the mock network (NETWORK=mock, tests). */
+export class MockEscrow implements EscrowRail {
+  constructor(
+    private readonly network: MockNetwork,
+    readonly id = 'mock-escrow00',
+  ) {
+    network.wallet(id, 0);
+  }
+
+  createInvoice = async (req: {
+    amount: Sats;
+    expiresAt: number;
+    payerIdentity: string;
+    memo: string;
+  }) => this.network.createInvoice(this.id, req.amount, req.expiresAt, req.payerIdentity);
+  findInvoicePayment = async (invoice: string) => this.network.findInvoicePayment(this.id, invoice);
+  onInvoicePaid = (listener: (p: InvoicePayment) => void) =>
+    this.network.subscribeInvoices(this.id, listener);
+  pay = async (to: string, amount: Sats, idempotencyKey: string) =>
+    this.network.send(this.id, to, amount, idempotencyKey);
+  paymentStatus = async (idempotencyKey: string) =>
+    this.network.keyedStatus(this.id, idempotencyKey);
 }

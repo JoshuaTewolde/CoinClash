@@ -144,3 +144,75 @@ describe('mock HTLCs', () => {
     expect(net.balanceOf('nobody')).toBe(0);
   });
 });
+
+describe('mock escrow (invoices, keyed payouts)', () => {
+  it('takes exactly one payment per invoice, from the bound payer only, and pays out once per key', async () => {
+    let t = 1_000_000;
+    const net = new MockNetwork(() => t);
+    const { MockEscrow } = await import('../src/mock.js');
+    const escrow = new MockEscrow(net);
+    const alice = net.wallet('alice', 5_000);
+    net.wallet('bob', 5_000);
+    const events: string[] = [];
+    escrow.onInvoicePaid((p) => events.push(p.invoice));
+
+    const inv = await escrow.createInvoice({
+      amount: 1000,
+      expiresAt: t + 60,
+      payerIdentity: 'alice',
+      memo: 'm',
+    });
+    await expect(net.wallet('bob').payInvoice(inv, 'k')).rejects.toThrow(/another payer/);
+    const first = await alice.payInvoice(inv, 'deposit:m1');
+    expect(await alice.payInvoice(inv, 'deposit:m1')).toEqual(first); // idempotent
+    await expect(alice.payInvoice(inv, 'other-key')).rejects.toThrow(/already paid/);
+    await flush();
+    expect(events).toEqual([inv]);
+    expect(await escrow.findInvoicePayment(inv)).toMatchObject({ amount: 1000 });
+    expect(net.balanceOf('alice')).toBe(4000);
+
+    const out = await escrow.pay('bob', 1000, 'payout:m1:bob');
+    expect(await escrow.pay('bob', 1000, 'payout:m1:bob')).toEqual(out);
+    expect(net.balanceOf('bob')).toBe(6000);
+    expect(await escrow.paymentStatus('payout:m1:bob')).toBe('completed');
+    expect(await escrow.paymentStatus('payout:m1:nobody')).toBeNull();
+
+    net.faults.failPayouts = true;
+    await expect(escrow.pay('bob', 1, 'payout:x')).rejects.toThrow(/injected/);
+    expect(await escrow.paymentStatus('payout:x')).toBe('failed');
+    net.faults.failPayouts = false;
+
+    const late = await escrow.createInvoice({
+      amount: 10,
+      expiresAt: t + 1,
+      payerIdentity: 'alice',
+      memo: 'm',
+    });
+    t += 5;
+    await expect(alice.payInvoice(late, 'late')).rejects.toThrow(/expired/);
+    await expect(alice.payInvoice('nope', 'n')).rejects.toThrow(/Unknown invoice/);
+  });
+
+  it('can drop or duplicate invoice events', async () => {
+    const net = new MockNetwork(() => 0);
+    const { MockEscrow } = await import('../src/mock.js');
+    const escrow = new MockEscrow(net);
+    const alice = net.wallet('alice', 100);
+    const seen: string[] = [];
+    escrow.onInvoicePaid((p) => seen.push(p.paymentId));
+    net.faults.duplicateInvoiceEvents = true;
+    await alice.payInvoice(
+      await escrow.createInvoice({ amount: 1, expiresAt: 10, payerIdentity: 'alice', memo: '' }),
+      'a',
+    );
+    net.faults.duplicateInvoiceEvents = false;
+    net.faults.dropInvoiceEvents = true;
+    await alice.payInvoice(
+      await escrow.createInvoice({ amount: 1, expiresAt: 10, payerIdentity: 'alice', memo: '' }),
+      'b',
+    );
+    await flush();
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toBe(seen[1]);
+  });
+});
