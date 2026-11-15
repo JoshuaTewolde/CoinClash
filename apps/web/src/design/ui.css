@@ -742,6 +742,24 @@ a.card {
   background: var(--cc-sunflower);
 }
 
+/* ---------- network warning ---------- */
+.net-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-3);
+  margin: var(--cc-space-3) var(--cc-space-4) 0;
+  padding: var(--cc-space-3);
+  background: var(--cc-tomato);
+  border: var(--cc-outline);
+  border-radius: var(--cc-radius-md);
+  box-shadow: 4px 4px 0 var(--cc-ink);
+  font-size: var(--cc-text-sm);
+}
+
+.net-banner .btn--icon {
+  background: var(--cc-white);
+}
+
 /* ---------- secured badge ---------- */
 .secured {
   display: inline-flex;

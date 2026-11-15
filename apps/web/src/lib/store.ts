@@ -34,6 +34,8 @@ export interface Snapshot {
   readonly toast: string | null;
   /** Nickname of the last account on this device, for the "Welcome back · Unlock" screen. */
   readonly returning: string | null;
+  /** True when this network can't reach a Spark operator (see lib/reachability.ts). */
+  readonly networkBlocked: boolean;
 }
 
 const SESSION_KEY = 'cc.session';
@@ -82,6 +84,7 @@ export class Store {
     network: load<Network>(NETWORK_KEY) ?? 'regtest',
     toast: null,
     returning: null,
+    networkBlocked: false,
   };
   private readonly listeners = new Set<() => void>();
   private token: string | null = null;
@@ -122,6 +125,7 @@ export class Store {
         ? this.snap.network
         : config.network;
       this.set({ config, network: picked });
+      if (picked !== 'mock') void this.checkReachability();
       const saved = load<{ token: string; user: SessionUser }>(SESSION_KEY);
       const wallet = await (await this.identity()).restore();
       if (!wallet) return this.set({ phase: 'signedOut', returning: saved?.user.nickname ?? null });
@@ -343,6 +347,17 @@ export class Store {
 
   hasLocked(matchId: string): boolean {
     return this.agent?.hasLocked(matchId) ?? false;
+  }
+
+  async checkReachability(): Promise<void> {
+    const { unreachableSparkHosts } = await import('./reachability');
+    const blocked = await unreachableSparkHosts();
+    if (blocked.length) console.warn('[coinclash] unreachable Spark hosts', blocked);
+    this.set({ networkBlocked: blocked.length > 0 });
+  }
+
+  dismissNetworkWarning(): void {
+    this.set({ networkBlocked: false });
   }
 
   setNetwork(network: Network): void {

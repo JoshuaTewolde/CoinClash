@@ -60,3 +60,12 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
   });
 });
+
+describe('network warning', () => {
+  it('shows a dismissible banner when a payment server is unreachable', () => {
+    render(<App store={storeWith({ phase: 'signedOut', networkBlocked: true })} />);
+    expect(screen.getByText(/blocking a payment server/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText(/blocking a payment server/)).toBeNull();
+  });
+});

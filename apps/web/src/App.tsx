@@ -16,7 +16,7 @@ import './design/ui.css';
 const TABS = new Set(['/', '/wallet', '/settings']);
 
 function Shell() {
-  const { phase, error, toast } = useSnapshot();
+  const { phase, error, toast, networkBlocked } = useSnapshot();
   const store = useStoreApi();
   const { pathname } = useLocation();
 
@@ -61,6 +61,22 @@ function Shell() {
 
   return (
     <div className="app">
+      {networkBlocked && (
+        <div className="net-banner" role="alert">
+          <span>
+            <strong>Your network is blocking a payment server.</strong> Switch to mobile data, use a
+            VPN, or set your DNS to 1.1.1.1, then reload.
+          </span>
+          <button
+            type="button"
+            className="btn btn--icon"
+            aria-label="Dismiss"
+            onClick={() => store.dismissNetworkWarning()}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {body}
       {phase === 'ready' && TABS.has(pathname) && <BottomNav />}
       {toast && (
