@@ -1,8 +1,9 @@
 import type { FriendStats, MatchView } from '@coinclash/shared';
 import { Link } from 'react-router-dom';
-import { Amount, ButtonLink, Card, FlameIcon, Logo, useNow } from '../design/components';
+import { Amount, Button, ButtonLink, Card, FlameIcon, Logo, useNow } from '../design/components';
 import { NetworkPicker } from '../design/NetworkPicker';
 import { GameBadge, gameMeta } from '../games/registry';
+import { promptInstall, useCanInstall } from '../lib/install';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
 import { describeMatch, isFinal, opponentName } from '../match/describe';
 
@@ -45,6 +46,7 @@ function FriendTile({ f }: { f: FriendStats }) {
 export function Home() {
   const { balance, network, matches, friends } = useSnapshot();
   const now = useNow(1000);
+  const canInstall = useCanInstall();
   const all = Object.values(matches).sort((a, b) => b.updatedAt - a.updatedAt);
   const live = all.filter((v) => !isFinal(v));
   const recent = all.filter(isFinal).slice(0, 5);
@@ -94,6 +96,18 @@ export function Home() {
             ))}
           </div>
         </section>
+      )}
+
+      {canInstall && (
+        <Card tone="sun" aria-label="Install">
+          <strong>Put CoinClash on your home screen</strong>
+          <span className="muted">
+            Opens full-screen, like an app. Challenges are one tap away.
+          </span>
+          <Button variant="plain" onClick={() => void promptInstall()}>
+            Install app
+          </Button>
+        </Card>
       )}
 
       {recent.length > 0 && (

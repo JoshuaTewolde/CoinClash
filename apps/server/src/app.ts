@@ -214,7 +214,18 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
       '/assets',
       express.static(join(dist, 'assets'), { immutable: true, maxAge: '365d', fallthrough: false }),
     );
-    app.use(express.static(dist, { index: false, maxAge: '1h' }));
+    app.use(
+      express.static(dist, {
+        index: false,
+        maxAge: '1h',
+        // The service worker and manifest must update promptly.
+        setHeaders: (res, path) => {
+          if (/(sw\.js|registerSW\.js|workbox-[\w-]+\.js|manifest\.webmanifest)$/.test(path)) {
+            res.setHeader('cache-control', 'no-cache');
+          }
+        },
+      }),
+    );
     app.get(/^\/(?!api\/|socket\.io\/|health$).*/, (_req, res) => {
       res.setHeader('cache-control', 'no-cache');
       res.sendFile(join(dist, 'index.html'));

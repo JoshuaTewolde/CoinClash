@@ -14,9 +14,9 @@
   "dependencies": {
     "@breeztech/breez-sdk-spark": "0.28.4",
     "@coinclash/game-connect4": "workspace:^",
+    "@coinclash/game-pool": "workspace:^",
     "@coinclash/game-rps": "workspace:^",
     "@coinclash/game-sdk": "workspace:^",
-    "@coinclash/game-pool": "workspace:^",
     "@coinclash/game-tictactoe": "workspace:^",
     "@coinclash/game-trivia": "workspace:^",
     "@coinclash/rail": "workspace:^",
@@ -35,6 +35,7 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^25.0.1",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vite-plugin-pwa": "0.21.1"
   }
 }
