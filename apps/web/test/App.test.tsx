@@ -54,6 +54,33 @@ describe('App shell', () => {
     ).toBe('true');
   });
 
+  it('shows head-to-head record and net sats on friend tiles', () => {
+    const friend = (id: string, wins: number, losses: number, netSats: number) => ({
+      id,
+      nickname: id,
+      streakDays: 0,
+      gamesPlayed: wins + losses,
+      lastPlayedAt: 0,
+      record: { wins, losses, draws: 0 },
+      netSats,
+      byGame: {},
+    });
+    render(
+      <App
+        store={storeWith({
+          phase: 'ready',
+          user: { id: 'u', nickname: 'Uma' },
+          balance: 0,
+          friends: [friend('Maya', 3, 2, 450), friend('Dev', 0, 1, -200), friend('Ann', 1, 1, 0)],
+        })}
+      />,
+    );
+    expect(screen.getByText('You 3–2')).toBeTruthy();
+    expect(screen.getByText('+450 sats')).toBeTruthy();
+    expect(screen.getByText('−200 sats')).toBeTruthy();
+    expect(screen.getByText('Even')).toBeTruthy();
+  });
+
   it('shows a retry on connection errors', () => {
     render(<App store={storeWith({ phase: 'error', error: 'Offline' })} />);
     expect(screen.getByRole('alert').textContent).toBe('Offline');

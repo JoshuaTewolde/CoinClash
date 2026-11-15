@@ -828,6 +828,20 @@ a.card {
   font-size: var(--cc-text-sm);
 }
 
+.h2h {
+  font-weight: 800;
+}
+
+/* Net sats vs a friend: money color, with a sign (no red/green reliance). */
+.net {
+  font-weight: 800;
+  color: var(--cc-money);
+}
+
+.net--down {
+  color: var(--cc-ink-soft);
+}
+
 .secured {
   color: inherit;
   text-decoration: none;

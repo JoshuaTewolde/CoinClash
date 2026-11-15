@@ -28,6 +28,17 @@ function MatchRow({ v, now }: { v: MatchView; now: number }) {
   );
 }
 
+/** Net sats against a friend: "+450 sats" / "−200 sats" / "Even". */
+export function NetSats({ sats }: { sats: number }) {
+  if (!sats) return <span className="muted">Even</span>;
+  return (
+    <span className={`net net--${sats > 0 ? 'up' : 'down'}`}>
+      {sats > 0 ? '+' : '−'}
+      {Math.abs(sats).toLocaleString('en-US')} sats
+    </span>
+  );
+}
+
 function FriendTile({ f }: { f: FriendStats }) {
   const lit = f.streakDays > 0;
   return (
@@ -37,9 +48,11 @@ function FriendTile({ f }: { f: FriendStats }) {
         <FlameIcon lit={lit} />
         {lit ? `${f.streakDays}-day streak` : 'No streak'}
       </span>
-      <span className="muted">
-        {f.gamesPlayed} {f.gamesPlayed === 1 ? 'game' : 'games'} played
+      <span className="h2h">
+        You {f.record.wins}–{f.record.losses}
+        {f.record.draws ? `–${f.record.draws}` : ''}
       </span>
+      <NetSats sats={f.netSats} />
     </Link>
   );
 }

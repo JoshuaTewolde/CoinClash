@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ButtonLink, Card, FlameIcon, ScreenHead } from '../design/components';
 import { GameBadge, gameMeta } from '../games/registry';
 import { useSnapshot } from '../lib/StoreContext';
+import { NetSats } from './Home';
 
 export function Friend() {
   const { id = '' } = useParams();
@@ -30,6 +31,9 @@ export function Friend() {
         <span>
           {f.gamesPlayed} {f.gamesPlayed === 1 ? 'game' : 'games'} played · {f.record.wins}W{' '}
           {f.record.losses}L {f.record.draws}D
+        </span>
+        <span>
+          Overall: <NetSats sats={f.netSats} />
         </span>
       </Card>
       <section className="stack" aria-labelledby="by-game">

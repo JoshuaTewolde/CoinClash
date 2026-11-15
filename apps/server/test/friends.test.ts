@@ -68,12 +68,18 @@ describe('friendStats', () => {
       streakDays: 3,
       gamesPlayed: 4,
       record: { wins: 2, losses: 1, draws: 1 },
+      netSats: 2000,
       byGame: {
         tictactoe: { wins: 2, losses: 1, draws: 0 },
         connect4: { wins: 0, losses: 0, draws: 1 },
       },
     });
-    expect(stats[1]).toMatchObject({ nickname: 'Dev', streakDays: 0, gamesPlayed: 1 });
+    expect(stats[1]).toMatchObject({
+      nickname: 'Dev',
+      streakDays: 0,
+      gamesPlayed: 1,
+      netSats: -2000,
+    });
   });
 
   it('ignores matches without a game result (declined, cancelled, ongoing)', () => {

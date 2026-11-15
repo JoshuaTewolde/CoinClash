@@ -196,6 +196,8 @@ export interface FriendStats {
   /** Unix ms of the most recent finished match. */
   readonly lastPlayedAt: number;
   readonly record: Record3;
+  /** Sats won minus sats lost against this friend (a win nets their stake). */
+  readonly netSats: number;
   readonly byGame: Readonly<Record<string, Record3>>;
 }
 

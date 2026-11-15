@@ -55,6 +55,7 @@ export function friendStats(
     {
       days: Set<number>;
       games: number;
+      net: number;
       last: number;
       record: { wins: number; losses: number; draws: number };
       byGame: Map<string, { wins: number; losses: number; draws: number }>;
@@ -68,13 +69,14 @@ export function friendStats(
     if (!friend) continue;
     let s = byFriend.get(friend);
     if (!s) {
-      s = { days: new Set(), games: 0, last: 0, record: empty(), byGame: new Map() };
+      s = { days: new Set(), games: 0, net: 0, last: 0, record: empty(), byGame: new Map() };
       byFriend.set(friend, s);
     }
     // When the game ended (entered SETTLING), not when the claim later landed.
     const finishedAt = doc.transitions.find((t) => t.to === 'SETTLING')?.at ?? doc.updatedAt;
     s.days.add(localDay(finishedAt, tzOffsetMinutes));
     s.games++;
+    if (res.status === 'win') s.net += res.winner === me ? doc.stake : -doc.stake;
     s.last = Math.max(s.last, finishedAt);
     bump(s.record, doc, me);
     const g = s.byGame.get(doc.gameId) ?? empty();
@@ -91,6 +93,7 @@ export function friendStats(
       gamesPlayed: s.games,
       lastPlayedAt: s.last,
       record: s.record as Record3,
+      netSats: s.net,
       byGame: Object.fromEntries(s.byGame),
     }))
     .sort((a, b) => b.lastPlayedAt - a.lastPlayedAt);
