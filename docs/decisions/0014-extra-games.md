@@ -42,3 +42,21 @@ handled alternating play, simultaneous play and physics without changes.
 - E2E: each game has a two-phone Playwright spec on the mock rail, paying into escrow.
 - The web registry lists all five games. The server's `/api/config` decides which are playable.
 - E2E ports are fixed (5174/8788), so parallel worktrees must not run E2E at the same time.
+
+## Pool UI update (2026-11-15, owner feedback)
+
+- **Every shot replays on both phones.** The replay is keyed on the shot number. The shooter
+  receives the same shot twice (move reply plus broadcast), and the second copy used to cancel
+  the replay.
+- **Full table:** turning a phone sideways (or tapping "⟲ Full table") fills the screen, and on
+  Android Chrome it goes full screen and locks landscape.
+  - **Power cue on the right edge:** pull down to set power, release to shoot. A tiny pull
+    cancels. It slides away while it isn't your shot.
+  - **Fine-aim strip on the left edge**, so the right hand handles power and the left handles aim.
+  - **Top bar:** your group and remaining balls, the turn and status, then the opponent's.
+- **Aim:** drag on the felt and the cue points at your finger. A ghost ball marks the first
+  contact, and a short line shows the object ball's direction (equal-mass, line of centres).
+- **Your balls pulse twice** at the start of each of your turns. Tap "You: Solids/Stripes" to
+  replay the pulse.
+- **Result screen:** the board renders in `review` mode (no controls, no aim), and the
+  game-ending shot replays there.
