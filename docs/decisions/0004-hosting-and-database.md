@@ -49,3 +49,21 @@ Vultr Chicago, 1 vCPU / 2 GB RAM / 55 GB SSD, Ubuntu 24.04, IPv4 `64.177.9.254`,
   until the Phase 7 deploy job is real.
 - Why root rather than a deploy user: it's a single-purpose, key-only box for the hackathon, and a
   non-root deploy user in the `docker` group is equivalent to root anyway.
+
+## Deployment (2026-11-15)
+
+- **One container serves everything.** The multi-stage `Dockerfile` builds the web app (with the
+  public `VITE_*` values: rpId `coinclash.vip`, the Breez key and the faucet URL) and the server
+  (tsup). It then runs `node dist/index.js` with `WEB_DIST_DIR=/app/web`. Express serves hashed
+  `/assets` as immutable, `index.html` as `no-cache`, and `.wasm` as `application/wasm`, with an
+  SPA fallback that never shadows `/api`, `/socket.io` or `/health`.
+- **Caddy** (`docker-compose.yml`, `Caddyfile`) terminates TLS (Let's Encrypt), proxies everything
+  (including WebSockets) to the server, adds HSTS, and redirects `www` to the apex.
+- **Server layout:** `/opt/coinclash/app` (git checkout), `/opt/coinclash/.env` (secrets, chmod
+  600), `/opt/coinclash/data` (Breez SDK state for the house and escrow wallets, mounted at
+  `/data`).
+- **Continuous deploy:** `deploy.yml` runs after CI succeeds on `main` (repository variable
+  `DEPLOY_ENABLED=true`). It SSHes in, checks out the exact commit, runs
+  `docker compose up -d --build`, then polls `https://coinclash.vip/health`.
+- **Production settings:** `WELCOME_BONUS_RATE_LIMIT_PER_HOUR=60`, because a hackathon venue
+  shares one Wi-Fi IP and 5 an hour blocked our own test sign-ups.

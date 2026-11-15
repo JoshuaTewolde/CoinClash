@@ -27,7 +27,7 @@ const ConfigSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((v) => v === 'true'),
-    WELCOME_BONUS_RATE_LIMIT_PER_HOUR: z.coerce.number().int().min(0).default(5),
+    WELCOME_BONUS_RATE_LIMIT_PER_HOUR: z.coerce.number().int().min(0).default(60),
     /** Server house wallet (regtest/mainnet). Required outside mock; checked at startup. */
     BREEZ_API_KEY: z.string().optional(),
     HOUSE_MNEMONIC: z.string().optional(),
