@@ -12,6 +12,8 @@ export default defineConfig({
       thresholds: {
         'packages/game-sdk/src/**': { lines: 90, functions: 90, branches: 90, statements: 90 },
         'packages/games/*/src/**': { lines: 90, functions: 90, branches: 90, statements: 90 },
+        'apps/server/src/match/**': { lines: 90, functions: 90, branches: 85, statements: 90 },
+        'packages/rail/src/**': { lines: 90, functions: 90, branches: 85, statements: 90 },
       },
     },
   },
