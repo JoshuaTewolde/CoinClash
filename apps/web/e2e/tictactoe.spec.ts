@@ -88,13 +88,16 @@ test('full tic-tac-toe match between two phones', async ({ browser }) => {
   await expect(first.getByTestId('payout-status')).toHaveText(/Paid \+2,000 sats/);
   await expect(second.getByRole('heading', { name: /won$/ })).toBeVisible();
 
+  // The loser offers a rematch; the winner sees it on the result screen right away.
+  await second.getByRole('button', { name: /Rematch/ }).click();
+  await expect(second.getByText(/Waiting for .* to answer/)).toBeVisible();
+  await expect(first.getByText(/wants a rematch!/)).toBeVisible();
+  await expect(first.getByRole('button', { name: /Answer .*'s rematch/ })).toBeVisible();
+
   // Balances: the winner got the whole 2,000 pot instantly; the loser is down 1,000.
   await first.getByRole('link', { name: 'Home' }).click();
   await expect(first.getByLabel('Your wallet')).toContainText('11,000 sats');
   await expect(first.getByText('1-day streak')).toBeVisible();
-  await second.getByRole('button', { name: /Rematch/ }).click();
-  await expect(second.getByRole('button', { name: 'Accept 1,000' })).toHaveCount(0);
-  await expect(second.getByText(/Waiting for .* to answer/)).toBeVisible();
   await second.getByRole('link', { name: 'Back home' }).click();
   await expect(second.getByLabel('Your wallet')).toContainText('9,000 sats');
 });

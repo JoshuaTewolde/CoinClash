@@ -760,6 +760,22 @@ a.card {
   background: var(--cc-white);
 }
 
+/* ---------- rematch offer ---------- */
+.rematch-offer {
+  animation: offer-pop 360ms var(--cc-ease-bounce);
+}
+
+@keyframes offer-pop {
+  from {
+    transform: scale(0.92) rotate(-1deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 /* ---------- secured badge ---------- */
 .secured {
   display: inline-flex;

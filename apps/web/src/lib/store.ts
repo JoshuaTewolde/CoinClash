@@ -213,7 +213,7 @@ export class Store {
     socket.on('connect_error', (err) => {
       if (/expired|token|signed in/i.test(err.message)) void this.login(wallet).catch(() => {});
     });
-    socket.on('match:update', (v: MatchView) => this.upsert(v));
+    socket.on('match:update', (v: MatchView) => this.upsert(v, true));
     socket.on('match:code', (c: CodeRelease) => {
       void this.agent?.onCode(c).then(() => this.refreshBalance());
     });
@@ -241,9 +241,15 @@ export class Store {
 
   // ---------- data ----------
 
-  private upsert(v: MatchView): void {
+  private upsert(v: MatchView, live = false): void {
     const prev = this.snap.matches[v.id];
     this.set({ matches: { ...this.snap.matches, [v.id]: v } });
+    // A brand-new challenge (or rematch) addressed to me, pushed live: tell me wherever I am.
+    if (live && !prev && v.status === 'NEGOTIATING' && v.respondent === this.snap.user?.id) {
+      const game = this.snap.config?.games.find((g) => g.id === v.gameId)?.name ?? 'a game';
+      const verb = v.rematchOf ? 'wants a rematch of' : 'challenged you to';
+      this.toast(`${v.challenger.nickname} ${verb} ${game}`);
+    }
     if (v.status === 'AWAITING_LOCKS') void this.agent?.sync(v);
     if (prev && prev.status !== v.status) {
       void this.refreshBalance();

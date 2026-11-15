@@ -25,9 +25,13 @@ const REASONS: Record<string, string> = {
 };
 
 export function Result({ view }: { view: MatchView }) {
-  const { network } = useSnapshot();
+  const { network, matches } = useSnapshot();
   const store = useStoreApi();
   const navigate = useNavigate();
+  // A rematch either player offered. The server pushes it to both players the moment it's made.
+  const rematchView = view.rematchId ? matches[view.rematchId] : undefined;
+  const theyOffered = Boolean(view.rematchId) && rematchView?.challenger.id !== view.you;
+  const youOffered = Boolean(view.rematchId) && rematchView?.challenger.id === view.you;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const o = outcome(view);
@@ -159,8 +163,20 @@ export function Result({ view }: { view: MatchView }) {
 
       <ErrorText>{error}</ErrorText>
       <div className="spacer" />
+      {theyOffered && (
+        <Card tone="sun" raised aria-label="Rematch offer" className="rematch-offer">
+          <strong>{them} wants a rematch!</strong>
+          <span className="muted">
+            Same game, {view.stake.toLocaleString('en-US')} sats each. Accept, counter or pass.
+          </span>
+        </Card>
+      )}
       <Button variant="primary" size="lg" block busy={busy} onClick={() => void rematch()}>
-        Rematch · {view.stake.toLocaleString('en-US')}
+        {theyOffered
+          ? `Answer ${them}'s rematch`
+          : youOffered
+            ? `Rematch offered · waiting for ${them}`
+            : `Rematch · ${view.stake.toLocaleString('en-US')}`}
       </Button>
       <div className="grid-2">
         <Button onClick={share}>Share</Button>
