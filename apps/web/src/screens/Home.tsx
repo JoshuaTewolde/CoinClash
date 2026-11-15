@@ -89,9 +89,10 @@ export function Home() {
         </svg>
         New challenge
       </ButtonLink>
-      <ButtonLink to="/join" block>
-        Join with code
-      </ButtonLink>
+      <div className="grid-2">
+        <ButtonLink to="/join">Join with code</ButtonLink>
+        <ButtonLink to="/practice">Practice (free)</ButtonLink>
+      </div>
 
       <NotificationsPrompt />
 

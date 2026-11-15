@@ -6,6 +6,7 @@
  */
 import { NicknameSchema } from '@coinclash/shared';
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Button, Card, ErrorText, Logo } from '../design/components';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
 
@@ -112,6 +113,9 @@ export function Onboarding() {
         </Card>
       )}
       <AuthForm />
+      <Link to="/practice" className="btn btn--block">
+        Try a free practice game first
+      </Link>
     </main>
   );
 }

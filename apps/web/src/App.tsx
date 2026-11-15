@@ -10,6 +10,7 @@ import { JoinCode } from './screens/JoinCode';
 import { Match } from './screens/match/Match';
 import { NewChallenge } from './screens/NewChallenge';
 import { Onboarding } from './screens/Onboarding';
+import { Practice } from './screens/Practice';
 import { Settings } from './screens/Settings';
 import { Wallet } from './screens/Wallet';
 import './design/ui.css';
@@ -30,6 +31,14 @@ function Shell() {
     body = (
       <Routes>
         <Route path="/i/:code" element={<Invite />} />
+      </Routes>
+    );
+  } else if (pathname.startsWith('/practice')) {
+    // Practice needs no account or wallet (ADR 0017).
+    body = (
+      <Routes>
+        <Route path="/practice" element={<Practice />} />
+        <Route path="/practice/:gameId" element={<Practice />} />
       </Routes>
     );
   } else if (phase === 'loading') {

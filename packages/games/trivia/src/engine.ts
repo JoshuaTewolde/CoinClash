@@ -107,6 +107,12 @@ function correctIndex(d: DealtQuestion): number {
   return d.order.indexOf(bankQuestion(d).answer);
 }
 
+/** Displayed index of the correct option for question `index` (practice bot, tests). */
+export function correctChoice(state: TriviaState, index: number): number {
+  const d = state.questions[index];
+  return d ? correctIndex(d) : -1;
+}
+
 /** The open (last) answer pair. `answers` is never empty. */
 function openPair(state: TriviaState): readonly [Answer, Answer] {
   return state.answers[state.answers.length - 1] as readonly [Answer, Answer];
