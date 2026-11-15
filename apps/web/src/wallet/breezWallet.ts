@@ -28,6 +28,7 @@ import {
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import type { AppWallet, IdentityProvider, WalletTx } from './types';
+import { clearVault, loadFromVault, saveToVault } from './vault';
 
 export type BreezNetwork = 'regtest' | 'mainnet';
 
@@ -275,6 +276,7 @@ export function passkeyIdentity(opts: PasskeyIdentityOptions): IdentityProvider 
       try {
         const { wallet } = await (await passkeys()).register({ label: WALLET_LABEL });
         remember();
+        await saveToVault(wallet.seed, opts.network);
         return await openWallet(wallet.seed, opts);
       } catch (err) {
         throw friendlyPasskeyError(err);
@@ -284,14 +286,19 @@ export function passkeyIdentity(opts: PasskeyIdentityOptions): IdentityProvider 
       try {
         const { wallet } = await (await passkeys()).signIn({ label: WALLET_LABEL });
         remember();
+        await saveToVault(wallet.seed, opts.network);
         return await openWallet(wallet.seed, opts);
       } catch (err) {
         throw friendlyPasskeyError(err);
       }
     },
-    // A passkey needs a user gesture, so there's no silent restore: the app shows "Unlock".
-    restore: async () => null,
+    // Silent restore only from the device vault (ADR 0015); otherwise the app shows "Unlock".
+    async restore() {
+      const entry = await loadFromVault<Seed>(opts.network);
+      return entry ? openWallet(entry.seed, opts) : null;
+    },
     forget() {
+      void clearVault();
       try {
         localStorage.removeItem(RETURNING_KEY);
       } catch {

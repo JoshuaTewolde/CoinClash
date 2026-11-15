@@ -1,11 +1,14 @@
 /** Settings (spec §8.8): money mode (ADR 0010), account, passkey backup notice, sign out. */
+import { useState } from 'react';
 import { Button, Card, ScreenHead } from '../design/components';
 import { NetworkChoices } from '../design/NetworkPicker';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
+import { alwaysAskPasskey, setAlwaysAskPasskey } from '../wallet/vault';
 
 export function Settings() {
   const { user } = useSnapshot();
   const store = useStoreApi();
+  const [askEveryTime, setAskEveryTime] = useState(alwaysAskPasskey);
   return (
     <main className="screen">
       <ScreenHead title="Settings" />
@@ -32,6 +35,32 @@ export function Settings() {
         <code className="muted" style={{ wordBreak: 'break-all' }}>
           {user?.id}
         </code>
+      </Card>
+
+      <Card aria-label="Security">
+        <span className="eyebrow">Security</span>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={askEveryTime}
+            onChange={(e) => {
+              setAskEveryTime(e.target.checked);
+              void setAlwaysAskPasskey(e.target.checked);
+              store.toast(
+                e.target.checked
+                  ? 'CoinClash will ask for your passkey every time it opens'
+                  : 'This device will stay signed in',
+              );
+            }}
+          />
+          <span>
+            <strong>Ask for my passkey every time</strong>
+            <span className="muted" style={{ display: 'block' }}>
+              Off: this device stays signed in for up to 30 days. On: unlock with your passkey on
+              every open.
+            </span>
+          </span>
+        </label>
       </Card>
 
       <Card tone="sun" aria-label="Backup">

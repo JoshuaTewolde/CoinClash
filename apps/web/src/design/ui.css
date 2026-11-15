@@ -742,6 +742,24 @@ a.card {
   background: var(--cc-sunflower);
 }
 
+/* ---------- toggle ---------- */
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cc-space-3);
+  min-height: var(--cc-touch-min);
+  cursor: pointer;
+  font-size: var(--cc-text-sm);
+}
+
+.toggle input {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  margin: 0;
+  accent-color: var(--cc-teal);
+}
+
 /* ---------- network warning ---------- */
 .net-banner {
   display: flex;

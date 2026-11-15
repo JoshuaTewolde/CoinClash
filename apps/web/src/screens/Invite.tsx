@@ -12,7 +12,7 @@ import { AuthForm } from './Onboarding';
 
 export function Invite() {
   const { code = '' } = useParams();
-  const { phase, network } = useSnapshot();
+  const { phase, network, returning } = useSnapshot();
   const store = useStoreApi();
   const navigate = useNavigate();
   const [preview, setPreview] = useState<InvitePreview | null>(null);
@@ -68,7 +68,9 @@ export function Invite() {
       <Card>
         <AuthForm>
           <p style={{ margin: 0, fontWeight: 700 }}>
-            Make an account to answer. It takes a second.
+            {returning
+              ? `Sign in to answer ${preview.challenger}.`
+              : 'Make an account to answer. It takes a second.'}
           </p>
         </AuthForm>
       </Card>
