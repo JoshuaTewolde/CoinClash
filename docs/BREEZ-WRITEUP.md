@@ -47,7 +47,7 @@ Where they are:
 5. Get a free Breez API key and put it in **both** `BREEZ_API_KEY` (server) and `VITE_BREEZ_API_KEY` (browser) in `.env`.
 6. Generate wallets for the server with `pnpm --filter @coinclash/server regtest mnemonic` (run it twice) and put them in `HOUSE_MNEMONIC` and `ESCROW_MNEMONIC`.
 7. Set `NETWORK=regtest`, `VITE_NETWORK=regtest`, a `SESSION_SECRET`, and a `MONGODB_URI` (or `memory`).
-8. Fund the house wallet from the regtest faucet: `pnpm --filter @coinclash/server regtest fund` prints its address.
+8. Fund the house wallet from the regtest faucet: `pnpm --filter @coinclash/server regtest fund HOUSE_MNEMONIC` (it falls back to printing the address for the web faucet).
 9. `pnpm dev`, then open http://localhost:5173. Passkeys are tied to the domain, so wallets made on localhost stay on localhost.
 
 More detail: [docs/testing-regtest.md](testing-regtest.md).
