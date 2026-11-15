@@ -50,6 +50,9 @@ importers:
       '@breeztech/breez-sdk-spark':
         specifier: 0.28.4
         version: 0.28.4
+      '@coinclash/game-rps':
+        specifier: workspace:*
+        version: link:../../packages/games/rps
       '@coinclash/game-sdk':
         specifier: workspace:*
         version: link:../../packages/game-sdk
@@ -99,6 +102,9 @@ importers:
       '@breeztech/breez-sdk-spark':
         specifier: 0.28.4
         version: 0.28.4
+      '@coinclash/game-rps':
+        specifier: workspace:^
+        version: link:../../packages/games/rps
       '@coinclash/game-sdk':
         specifier: workspace:^
         version: link:../../packages/game-sdk

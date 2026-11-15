@@ -30,7 +30,16 @@ describe('server basics', () => {
       stakeMin: 100,
       stakeMax: 100000,
     });
-    expect(cfg.games).toEqual([{ id: 'tictactoe', name: 'Tic-tac-toe', turnModel: 'alternating' }]);
+    expect(cfg.games).toContainEqual({
+      id: 'tictactoe',
+      name: 'Tic-tac-toe',
+      turnModel: 'alternating',
+    });
+    expect(cfg.games).toContainEqual({
+      id: 'rps',
+      name: 'Rock Paper Scissors',
+      turnModel: 'simultaneous',
+    });
   });
 
   it('rejects sockets without a valid token and accepts signed-in ones', async () => {

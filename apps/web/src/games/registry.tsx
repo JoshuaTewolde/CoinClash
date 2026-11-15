@@ -3,6 +3,7 @@
  * `/api/config` decides which games are playable; the others show as "Coming soon".
  */
 import type { BoardProps } from '@coinclash/game-sdk';
+import { RpsBoard } from '@coinclash/game-rps/board';
 import { TicTacToeBoard } from '@coinclash/game-tictactoe/board';
 import type { ComponentType } from 'react';
 
@@ -22,7 +23,12 @@ export const GAMES: readonly GameMeta[] = [
     Board: TicTacToeBoard as ComponentType<BoardProps>,
   },
   { id: 'connect4', name: 'Connect 4', color: 'var(--cc-teal)' },
-  { id: 'rps', name: 'Rock Paper Scissors', color: 'var(--cc-tomato)' },
+  {
+    id: 'rps',
+    name: 'Rock Paper Scissors',
+    color: 'var(--cc-tomato)',
+    Board: RpsBoard as ComponentType<BoardProps>,
+  },
   { id: 'trivia', name: 'Trivia', color: 'var(--cc-white)' },
 ];
 
