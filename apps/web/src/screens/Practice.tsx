@@ -9,7 +9,7 @@ import {
   waitingOn,
   type GameSession,
 } from '@coinclash/game-sdk';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   BoardFrame,
@@ -21,6 +21,7 @@ import {
   ScreenHead,
 } from '../design/components';
 import { GameIcon, GAMES, gameMeta } from '../games/registry';
+import { cue, cueOnce } from '../lib/feedback';
 import { useSnapshot } from '../lib/StoreContext';
 import { BOT, botMove, ENGINES, YOU } from '../practice/bot';
 
@@ -79,6 +80,14 @@ function PracticeGame({ gameId }: { gameId: string }) {
 
   const over = result.status !== 'ongoing';
   const won = result.status === 'win' && result.winner === YOU;
+  const wasMyTurn = useRef(myTurn);
+  useEffect(() => {
+    if (myTurn && !wasMyTurn.current) cue('turn');
+    wasMyTurn.current = myTurn;
+  }, [myTurn]);
+  useEffect(() => {
+    if (result.status === 'win') cueOnce(`practice:${session.ctx.seed}`, won ? 'win' : 'lose');
+  }, [result.status, won, session.ctx.seed]);
   const Board = meta.Board;
   const view = plugin.viewFor(session.state, YOU) as unknown;
 

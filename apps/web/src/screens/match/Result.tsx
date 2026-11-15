@@ -1,6 +1,6 @@
 /** Result (spec §8.6): winner, payout status, Rematch, share. */
 import type { MatchView } from '@coinclash/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Amount,
@@ -14,6 +14,7 @@ import {
   SecuredBadge,
 } from '../../design/components';
 import { gameMeta } from '../../games/registry';
+import { cueOnce } from '../../lib/feedback';
 import { useSnapshot, useStoreApi } from '../../lib/StoreContext';
 import { opponentName, outcome } from '../../match/describe';
 import { shareInvite } from './InviteSent';
@@ -35,6 +36,11 @@ export function Result({ view }: { view: MatchView }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const o = outcome(view);
+  useEffect(() => {
+    // Only for a result that just happened, not when opening an old match.
+    if (Date.now() - view.updatedAt > 120_000) return;
+    if (o === 'won' || o === 'lost') cueOnce(`result:${view.id}`, o === 'won' ? 'win' : 'lose');
+  }, [o, view.id, view.updatedAt]);
   const them = opponentName(view);
   const meta = gameMeta(view.gameId);
   const result = view.game?.result;

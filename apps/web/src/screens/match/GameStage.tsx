@@ -1,6 +1,6 @@
 /** Game screen (spec §8.5): board, whose turn, turn timer, pot always visible. */
 import type { MatchView } from '@coinclash/shared';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Amount,
   BoardFrame,
@@ -11,6 +11,7 @@ import {
   useNow,
 } from '../../design/components';
 import { gameMeta } from '../../games/registry';
+import { cue } from '../../lib/feedback';
 import { useSnapshot, useStoreApi } from '../../lib/StoreContext';
 import { opponentName } from '../../match/describe';
 
@@ -25,6 +26,11 @@ export function GameStage({ view }: { view: MatchView }) {
   const them = opponentName(view);
   const myTurn = view.you !== null && game.waitingOn.includes(view.you);
   const Board = meta.Board;
+  const wasMyTurn = useRef(myTurn);
+  useEffect(() => {
+    if (myTurn && !wasMyTurn.current) cue('turn');
+    wasMyTurn.current = myTurn;
+  }, [myTurn]);
 
   const move = (m: unknown) => {
     setError('');

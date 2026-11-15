@@ -4,12 +4,14 @@ import { Button, Card, ScreenHead } from '../design/components';
 import { NetworkChoices } from '../design/NetworkPicker';
 import { NotificationsToggle } from '../design/NotificationsToggle';
 import { useSnapshot, useStoreApi } from '../lib/StoreContext';
+import { cue, feedbackEnabled, setFeedbackEnabled } from '../lib/feedback';
 import { alwaysAskPasskey, setAlwaysAskPasskey } from '../wallet/vault';
 
 export function Settings() {
   const { user } = useSnapshot();
   const store = useStoreApi();
   const [askEveryTime, setAskEveryTime] = useState(alwaysAskPasskey);
+  const [fx, setFx] = useState(feedbackEnabled);
   return (
     <main className="screen">
       <ScreenHead title="Settings" />
@@ -39,6 +41,27 @@ export function Settings() {
       </Card>
 
       <NotificationsToggle />
+
+      <Card aria-label="Sound and vibration">
+        <span className="eyebrow">Sound & vibration</span>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={fx}
+            onChange={(e) => {
+              setFx(e.target.checked);
+              setFeedbackEnabled(e.target.checked);
+              if (e.target.checked) cue('turn');
+            }}
+          />
+          <span>
+            <strong>Sounds and vibration</strong>
+            <span className="muted" style={{ display: 'block' }}>
+              A buzz and a beep when it’s your turn, and when you win or lose.
+            </span>
+          </span>
+        </label>
+      </Card>
 
       <Card aria-label="Security">
         <span className="eyebrow">Security</span>
