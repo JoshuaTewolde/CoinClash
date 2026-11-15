@@ -25,8 +25,8 @@ describe('money formatting', () => {
     expect(formatAmount(5000, 'mainnet', null)).toEqual({ sats: '5,000 sats', fiat: null });
   });
 
-  it('labels test sats and hides dollars on regtest and mock', () => {
-    expect(formatAmountInline(5000, 'regtest', 97_400)).toBe('5,000 test sats');
+  it('says plain sats and hides dollars on regtest and mock', () => {
+    expect(formatAmountInline(5000, 'regtest', 97_400)).toBe('5,000 sats');
     expect(formatAmount(5000, 'mock', 97_400).fiat).toBeNull();
   });
 });

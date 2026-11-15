@@ -12,6 +12,7 @@ These override the sections below. Rationale lives in `docs/decisions/`.
 - **2026-11-14, [ADR 0002](decisions/0002-htlc-oracle-escrow.md):** §6 is replaced. There is **one payment mode, Secure**, implemented as **HTLC "oracle" escrow**. Players cross-lock Spark HTLCs to each other, and the server only releases the winner's secret code. The server never holds match funds. **Trusted Friend mode, server-held escrow, external-wallet deposits and the debts system are removed.** This affects §1, §5, §6, §7, §8, §11 and §12 as described in the ADR.
 - **2026-11-14, [ADR 0003](decisions/0003-chrome-only-passkeys.md):** Chrome only for now, two-button passkey flow (Create account / Sign in).
 - **2026-11-14, [ADR 0004](decisions/0004-hosting-and-database.md):** domain `coinclash.vip`, MongoDB Atlas.
+- **2026-11-14, [ADR 0009](decisions/0009-ui-feedback-round-1.md):** amounts always say **"sats"** (no "test sats" labels, no "demo" wording). The network shows only on the Home badge and in Settings. Dollars still appear only on mainnet.
 - **2026-11-14, [ADR 0006](decisions/0006-game-plugin-interface.md):** `GamePlugin` gains `maxMatchSeconds` and a timeout/cap result rule (needed for HTLC deadlines).
 
 ---

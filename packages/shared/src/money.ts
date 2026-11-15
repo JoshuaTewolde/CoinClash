@@ -22,7 +22,7 @@ export function satsToUsd(sats: number, btcUsdRate: number): number {
 }
 
 export interface FormattedAmount {
-  /** Primary label, e.g. "5,000 sats" or "5,000 test sats" */
+  /** Primary label, e.g. "5,000 sats" (always plain "sats", ADR 0009) */
   sats: string;
   /** Secondary label, e.g. "≈ $4.87"; null on regtest/mock or when no rate is known */
   fiat: string | null;
@@ -30,7 +30,9 @@ export interface FormattedAmount {
 
 /**
  * Sats are the primary unit; dollars are shown smaller, in parentheses, only on mainnet.
- * On regtest and mock, amounts are labelled "test sats" and the dollar value is hidden.
+ * Amounts always read "sats", even on regtest. The network is shown once, by the badge on
+ * Home and in Settings, not on every amount (ADR 0009, amending spec §1). Off mainnet the
+ * dollar value is hidden, because test sats are worth nothing.
  */
 export function formatAmount(
   sats: number,
@@ -38,7 +40,7 @@ export function formatAmount(
   btcUsdRate?: number | null,
 ): FormattedAmount {
   const isTest = network !== 'mainnet';
-  const unit = isTest ? 'test sats' : sats === 1 ? 'sat' : 'sats';
+  const unit = sats === 1 ? 'sat' : 'sats';
   const satsLabel = `${formatSatsNumber(sats)} ${unit}`;
   const fiat =
     !isTest && btcUsdRate && btcUsdRate > 0

@@ -52,8 +52,8 @@ consume it directly, and the server's tsup build bundles it. There are no per-pa
 - UI: "Sticker Arcade" design system (spec §9). Use tokens from `tokens.css`, never raw colors.
   Bitcoin orange (`--cc-money`) is used **only** for money amounts. Touch targets ≥ 44px, layouts
   work at 360px wide, and respect `prefers-reduced-motion`.
-- Amounts: sats are primary and dollars secondary; on regtest/mock show "test sats" and no dollars. Use
-  `formatAmount` from `@coinclash/shared`.
+- Amounts: always "sats" (never "test sats" or "demo"; ADR 0009). Dollars appear only on mainnet.
+  The network shows only on the Home badge and in Settings. Use `formatAmount` from `@coinclash/shared`.
 
 ## Breez SDK (Spark): verified API notes (@breeztech/breez-sdk-spark, v0.28.x)
 
