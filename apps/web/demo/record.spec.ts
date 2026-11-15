@@ -25,11 +25,16 @@ const iphoneLandscape = noBrowser(devices['iPhone 15 Pro landscape']!);
 
 async function phone(browser: Browser, d: Device, dir: string): Promise<Page> {
   const { width, height } = d.viewport;
-  const ctx = await browser.newContext({
-    ...d,
-    deviceScaleFactor: SCALE,
-    recordVideo: { dir, size: { width: width * SCALE, height: height * SCALE } },
-  });
+  // SHOTS=1: sharp stills for the gallery (3x), no video.
+  const ctx = await browser.newContext(
+    SHOTS
+      ? { ...d, deviceScaleFactor: 3 }
+      : {
+          ...d,
+          deviceScaleFactor: SCALE,
+          recordVideo: { dir, size: { width: width * SCALE, height: height * SCALE } },
+        },
+  );
   // Mock servers have no fiat rate; show a realistic one for the stake picker.
   await ctx.route('**/api/rate', (r) => r.fulfill({ json: { usd: 64_600 } }));
   return ctx.newPage();
@@ -54,10 +59,21 @@ function clips(run: string) {
       writeFileSync(join(OUT, `${run}.json`), JSON.stringify(list, null, 2));
       await a.context().close();
       await b.context().close();
+      if (SHOTS) return;
       const [va, vb] = await Promise.all([a.video()!.path(), b.video()!.path()]);
       writeFileSync(join(OUT, `${run}.videos.json`), JSON.stringify({ a: va, b: vb }));
     },
   };
+}
+
+const SHOTS = Boolean(process.env.SHOTS);
+
+/** Gallery stills (SHOTS=1 only): one PNG per phone. */
+async function snap(name: string, a: Page, b?: Page) {
+  if (!SHOTS) return;
+  mkdirSync(join(OUT, 'shots'), { recursive: true });
+  await a.screenshot({ path: join(OUT, 'shots', `${name}-a.png`) });
+  if (b) await b.screenshot({ path: join(OUT, 'shots', `${name}-b.png`) });
 }
 
 const pause = (p: Page, ms = 1200) => p.waitForTimeout(ms);
@@ -144,6 +160,12 @@ test('story', async ({ browser }) => {
   const theo = await phone(browser, iphone, dir);
   const c = clips('story');
 
+  if (SHOTS) {
+    await maya.goto('/');
+    await theo.goto('/practice');
+    await pause(maya, 800);
+    await snap('signup', maya, theo);
+  }
   await Promise.all([signUp(maya, 'Maya'), signUp(theo, 'Theo')]);
 
   // New challenge with the dollar hint.
@@ -157,6 +179,7 @@ test('story', async ({ browser }) => {
   await stake.fill('');
   await stake.pressSequentially('1000', { delay: 250 });
   await pause(maya, 1500);
+  await snap('stake', maya, theo);
   await maya.getByRole('button', { name: 'Create challenge' }).click();
 
   // Invite screen: QR + 6-digit code; Theo joins by typing the code.
@@ -169,6 +192,7 @@ test('story', async ({ browser }) => {
   await theo.getByRole('button', { name: 'Find challenge' }).click();
   await expect(theo.getByRole('button', { name: 'Accept 1,000' })).toBeVisible();
   await pause(theo, 1200);
+  await snap('invite', maya, theo);
 
   // Negotiate: Theo counters 500, Maya takes the lower.
   c.start('05-negotiate');
@@ -180,18 +204,30 @@ test('story', async ({ browser }) => {
   await theo.getByRole('button', { name: 'Send counter' }).click();
   await expect(maya.getByText('Lower of the last two is 500')).toBeVisible();
   await pause(maya, 1500);
+  await snap('negotiate', maya, theo);
   await maya.getByRole('button', { name: 'Take the lower' }).click();
 
   // Pay into escrow; the board appears on both.
   c.start('06-pay-stake');
-  await payBoth(maya, theo, '500');
+  if (SHOTS) {
+    await maya.getByRole('button', { name: 'Pay 500 from wallet' }).click();
+    await pause(maya, 1500);
+    await snap('pay', maya, theo);
+    await theo.getByRole('button', { name: 'Pay 500 from wallet' }).click();
+  } else await payBoth(maya, theo, '500');
   await expect(theo.getByRole('grid', { name: 'Connect 4 board' })).toBeVisible();
   await pause(theo, 1500);
 
   // Connect 4, turn by turn: the first mover builds column 4, the other plays beside it.
   c.start('07-connect4');
   const cols = [4, 3, 4, 3, 4, 2, 4, 2, 5, 1, 6, 1, 7, 7, 5];
-  for (const col of cols) if (!(await drop([maya, theo], col))) break;
+  for (const [i, col] of cols.entries()) {
+    if (!(await drop([maya, theo], col))) break;
+    if (i === 5) {
+      await pause(maya, 1200);
+      await snap('connect4', maya, theo);
+    }
+  }
   for (let i = 0; i < 25 && !(await resultHeading(maya).isVisible()); i++) {
     await drop([maya, theo], (i % 7) + 1).catch(() => false);
   }
@@ -205,16 +241,21 @@ test('story', async ({ browser }) => {
   await loser.getByRole('button', { name: /Rematch/ }).click();
   await expect(winner.getByText(/wants a rematch!/)).toBeVisible();
   await pause(winner, 2500);
+  await snap('result', winner, loser);
 
   // Home on both, with the friend tile and balance.
   c.start('01-home');
   await Promise.all([goHome(maya), goHome(theo)]);
   await pause(maya, 3000);
+  await snap('home', maya, theo);
 
   // Wallet history + friend page.
   c.start('13-wallet-friends');
   for (const p of [maya, theo]) await p.getByRole('link', { name: 'Wallet' }).click();
   await pause(maya, 1500);
+  await maya.mouse.wheel(0, 350);
+  await pause(maya, 800);
+  await snap('wallet', maya);
   await maya.mouse.wheel(0, 600);
   await theo.mouse.wheel(0, 600);
   await pause(maya, 2500);
@@ -222,6 +263,7 @@ test('story', async ({ browser }) => {
   await maya.locator('.friend-tile').first().click();
   await theo.locator('.friend-tile').first().click();
   await pause(maya, 3000);
+  await snap('friend', maya, theo);
 
   // Direct challenge: RPS lands on Theo's Home live.
   c.start('04-direct-challenge');
@@ -252,6 +294,7 @@ test('story', async ({ browser }) => {
     await pause(theo, 900);
     await theo.getByRole('button', { name: b, exact: true }).click();
     await pause(maya, 2600);
+    if (a === 'Rock') await snap('rps', maya, theo);
   }
   await expect(resultHeading(maya)).toBeVisible({ timeout: 20_000 });
   await pause(maya, 2000);
@@ -299,6 +342,7 @@ test('story', async ({ browser }) => {
   await maya.goto('/escrow');
   await theo.goto('/escrow');
   await pause(maya, 4500);
+  await snap('escrow', maya, theo);
 
   // Practice (iPhone) and Settings (Android).
   c.start('15-practice');
@@ -370,6 +414,7 @@ test('pool', async ({ browser }) => {
     await shooter.mouse.move(tx, ty, { steps: 15 });
     await shooter.mouse.up();
     await pause(shooter, 800);
+    if (shot === 0) await snap('pool-aim', shooter);
     // Power: pull the cue down, then release.
     const cue = shooter.getByRole('slider', { name: /Power cue/ });
     const cb = (await cue.boundingBox())!;
@@ -378,8 +423,13 @@ test('pool', async ({ browser }) => {
     const pull = shot === 0 ? 0.75 : 0.45;
     await shooter.mouse.move(cb.x + cb.width / 2, cb.y + cb.height * pull, { steps: 20 });
     await pause(shooter, 400);
+    if (shot === 0) await snap('pool-power', shooter);
     await shooter.mouse.up();
-    await pause(shooter, 5500);
+    await pause(shooter, shot === 0 ? 900 : 5500);
+    if (shot === 0) {
+      await snap('pool-roll', maya, theo);
+      await pause(shooter, 4600);
+    }
   }
   await c.save(maya, theo);
 });
