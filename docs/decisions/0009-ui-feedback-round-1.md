@@ -12,7 +12,7 @@
    screen**, broken down on a tile per game.
    - Why: streaks reward playing together (and using Breez payments) every day. Win/loss in a
      prominent spot can discourage the friend who's behind.
-2. **The network badge is a status, not a toggle.** The network is fixed per deployment
+2. **The network badge is a status, not a toggle.** _(Superseded by [ADR 0010](0010-player-network-choice.md): the badge opens a network picker.)_ The network is fixed per deployment
    (`NETWORK`). Players can't switch it, so test sats and real money never mix in one wallet.
    It shows TEST SATS (teal) on regtest and REAL MONEY (tomato) on mainnet.
 
@@ -27,10 +27,8 @@
 5. **No "test sats" or "demo" wording.** Every amount says "sats". The network shows only on the
    Home badge and in Settings. Dollars are still shown only on mainnet, since test sats are
    worthless. This amends spec §1 ("label amounts as test sats"). `formatAmount` implements it.
-   - **Open question (owner):** should players _choose_ test vs real in Settings? Today the
-     network is fixed per deployment (`NETWORK`). Per-player choice would mean running both
-     networks in one server with separate match pools, because test and real players can't play
-     each other, plus two house wallets and the mainnet REAL MONEY safeguards.
+   - The open question about per-player network choice is answered in
+     [ADR 0010](0010-player-network-choice.md).
 
 ## Consequences
 

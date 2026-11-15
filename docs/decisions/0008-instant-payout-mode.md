@@ -1,7 +1,7 @@
 # 0008: Optional "Instant payout" mode (server as intermediary)
 
 - **Date:** 2026-11-14
-- **Status:** **Proposed**, awaiting a decision from the project owner.
+- **Status:** **Accepted** (owner, 2026-11-14): plan it; build as Phase 5b, after Locked mode works on regtest.
 
 ## Context
 
@@ -50,8 +50,46 @@ This is essentially the original spec §6b escrow, restricted to players who cho
 - Both match flows share the state machine. The mode-specific branches are confined to
   `AWAITING_LOCKS` vs `AWAITING_DEPOSITS` and to settlement.
 
-## Recommendation
+## Decision
 
-Build it **after** Locked mode works end-to-end on regtest (Phase 5), as a Phase 5b, and only if
-time allows before the deadline. Meanwhile, keep HTLC deadlines short and make the pending-return
-time very visible in the UI.
+The owner accepted the proposal. It's built **after** Locked mode works end-to-end on regtest
+(Phase 5), as **Phase 5b**. Until then, keep HTLC deadlines short and make the pending-return time
+very visible in the UI.
+
+## Implementation plan (Phase 5b)
+
+1. **Protocol and negotiation (`packages/shared`, machine).** Add `payout: 'locked' | 'instant'`
+   to the proposal. A counter may change it, and acceptance requires both sides to agree on the
+   stake **and** the payout. The default is `locked`. The challenge card shows it on its own line
+   ("Instant payout: CoinClash holds the pot during the match").
+2. **State machine.** `AWAITING_LOCKS` gets a sibling, `AWAITING_DEPOSITS`, with the same lock
+   deadline and the same cancellation and refund semantics. For instant matches, `SETTLING` means
+   "payout or refund in flight" and reaches `SETTLED` only when every ledger entry is `paid`.
+   Instant matches generate no preimages.
+3. **Rail (`packages/rail`).** Extend the interface with `createDepositRequest(matchId, player,
+amount, expiresAt)`, an `onDeposit` stream, `findDeposit(request)` (the polling backup) and
+   `pay(destination, amount, idempotencyKey)`. Implement them in `MockNetwork` first, with faults
+   (duplicate events, delayed events, failed payouts), then in the Breez rail.
+4. **Ledger (`db`).** A `ledger` collection with a unique index on `(matchId, kind, player)`,
+   where kind is `deposit | payout | refund`. Each entry has a status (`pending → paid | failed`)
+   and the SDK payment id. A payout is written as `pending` **before** `pay()` is called. On boot,
+   `reconcile()` re-checks every `pending` entry against `getPayment` / `listPayments` before
+   retrying, so a crash mid-payment never pays twice.
+5. **Escrow wallet.** A separate `ESCROW_MNEMONIC` (not the house bonus wallet), so the pot and
+   the welcome-bonus float never mix and the escrow balance can be audited against the ledger:
+   the sum of unpaid deposits equals the escrow balance minus fees. It's kept only on the server
+   and in GitHub secrets.
+6. **UI.** A "Payout" toggle on New challenge (Locked / Instant), with an info sheet comparing the
+   two. The deposit screen shows a "Pay from wallet" button (the in-app wallet pays the invoice),
+   and the result screen shows "Paid" when the payout lands.
+7. **Tests.**
+   - Machine tests for both branches.
+   - Service tests with the mock rail's faults: a lost event recovered by polling, a duplicate
+     event, a payout failure followed by a retry, and a crash between the ledger write and
+     `pay()`.
+   - An integration test that the balances after an instant match equal the stakes ± the pot,
+     with no double pay.
+   - A property test that across random event orders, the ledger never pays out more than it took in.
+
+**Out of scope for 5b:** instant mode on mainnet, which stays disabled until a separate decision
+(ADR 0010), and partial refunds.

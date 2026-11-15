@@ -13,6 +13,8 @@ These override the sections below. Rationale lives in `docs/decisions/`.
 - **2026-11-14, [ADR 0003](decisions/0003-chrome-only-passkeys.md):** Chrome only for now, two-button passkey flow (Create account / Sign in).
 - **2026-11-14, [ADR 0004](decisions/0004-hosting-and-database.md):** domain `coinclash.vip`, MongoDB Atlas.
 - **2026-11-14, [ADR 0009](decisions/0009-ui-feedback-round-1.md):** amounts always say **"sats"** (no "test sats" labels, no "demo" wording). The network shows only on the Home badge and in Settings. Dollars still appear only on mainnet.
+- **2026-11-14, [ADR 0008](decisions/0008-instant-payout-mode.md):** optional **Instant payout** mode (server holds the pot, pays instantly), agreed by both players. Planned as Phase 5b.
+- **2026-11-14, [ADR 0010](decisions/0010-player-network-choice.md):** players pick test vs real from the Home badge or Settings. Only test (regtest) is enabled for now, and real money shows as "Coming soon".
 - **2026-11-14, [ADR 0006](decisions/0006-game-plugin-interface.md):** `GamePlugin` gains `maxMatchSeconds` and a timeout/cap result rule (needed for HTLC deadlines).
 
 ---

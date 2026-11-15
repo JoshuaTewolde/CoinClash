@@ -105,5 +105,5 @@ non-trivial design choice, and amend `docs/SPEC.md` with a pointer when an ADR c
   two-button flow (Register / Sign in).
 - 2026-11-14: Production domain is **coinclash.vip** (passkey rpId `coinclash.vip`). Database is
   **MongoDB Atlas**; tests still use mongodb-memory-server.
-- 2026-11-14: Server core design (ADR 0007). Instant payout mode is **proposed**, not built (ADR 0008).
+- 2026-11-14: Server core design (ADR 0007). Instant payout mode accepted, built as Phase 5b (ADR 0008). Players pick the network; test only for now (ADR 0010). Server provisioned (ADR 0004).
 - Future work (don't build): encrypt HTLC preimages at rest; one-button passkey flow.
