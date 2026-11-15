@@ -97,3 +97,18 @@ export function isInvalid(value: unknown): value is InvalidMove {
     typeof (value as { reason?: unknown }).reason === 'string'
   );
 }
+
+/**
+ * Props every game's web board receives (`packages/games/<id>/src/Board.tsx`, export "./board").
+ * Type-only, so game-sdk stays React-free and server-safe.
+ */
+export interface BoardProps<View = unknown, Move = unknown> {
+  /** The player's view from `viewFor` (never hidden info). */
+  readonly view: View;
+  /** Viewer's player id, or null for a non-player. */
+  readonly you: string | null;
+  /** True when the server is waiting on this viewer's move. */
+  readonly canMove: boolean;
+  /** Send a move intent; the server validates it. */
+  readonly onMove: (move: Move) => void;
+}

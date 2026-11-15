@@ -1,0 +1,78 @@
+/* Tic-tac-toe board. Uses the web app's Sticker Arcade tokens (apps/web/src/design/tokens.css). */
+.ttt {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: var(--cc-space-2, 8px);
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.ttt__cell {
+  min-width: var(--cc-touch-min, 44px);
+  min-height: var(--cc-touch-min, 44px);
+  border: var(--cc-outline, 3px solid #161310);
+  border-radius: var(--cc-radius-md, 14px);
+  background: var(--cc-white, #fff);
+  padding: 14%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform var(--cc-press-ms, 90ms),
+    box-shadow var(--cc-press-ms, 90ms);
+}
+
+.ttt__cell:not(:disabled):hover {
+  background: var(--cc-paper, #fff8ec);
+}
+
+.ttt__cell:not(:disabled):active {
+  transform: translate(2px, 2px);
+}
+
+.ttt__cell:disabled {
+  cursor: default;
+  color: inherit;
+}
+
+.ttt__cell:focus-visible {
+  outline: 3px solid var(--cc-teal, #1fb5a8);
+  outline-offset: 2px;
+}
+
+.ttt__cell--win {
+  background: var(--cc-sunflower, #ffc93c);
+  box-shadow: var(--cc-shadow, 5px 5px 0 #161310);
+}
+
+.ttt__glyph {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  animation: ttt-pop 260ms var(--cc-ease-bounce, ease-out);
+}
+
+.ttt__glyph--x {
+  stroke: var(--cc-tomato, #ff5a3c);
+  filter: drop-shadow(2px 2px 0 var(--cc-ink, #161310));
+}
+
+.ttt__glyph--o {
+  stroke: var(--cc-teal, #1fb5a8);
+  filter: drop-shadow(2px 2px 0 var(--cc-ink, #161310));
+}
+
+@keyframes ttt-pop {
+  from {
+    transform: scale(0.3) rotate(-12deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
