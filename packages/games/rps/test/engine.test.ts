@@ -16,7 +16,8 @@ import { PICKS, rps, type Pick, type RpsState } from '../src/engine.js';
 const A = 'alice';
 const B = 'bob';
 
-function start(options?: unknown): GameSession<RpsState> {
+/** Most tests use best of 3 (first to 2); the default is best of 5. */
+function start(options: unknown = { bestOf: 3 }): GameSession<RpsState> {
   return startSession(rps, testContext('rps-seed', options));
 }
 
@@ -63,8 +64,8 @@ describe('rps: setup', () => {
     expect(isInvalid(rps.parseOptions!({ bestOf: 4 }))).toBe(true);
     expect(isInvalid(rps.parseOptions!({ bestOf: 3, x: 1 }))).toBe(true);
     expect(isInvalid(rps.parseOptions!('3'))).toBe(true);
-    // Stored options may be null (no options chosen): default best of 3.
-    expect(rps.init({ players: [A, B], seed: 's', options: null }).bestOf).toBe(3);
+    // Stored options may be null (no options chosen): default best of 5, first to 3.
+    expect(rps.init({ players: [A, B], seed: 's', options: null }).bestOf).toBe(5);
   });
 });
 

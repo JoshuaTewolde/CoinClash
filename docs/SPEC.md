@@ -9,6 +9,7 @@
 
 These override the sections below. Rationale lives in `docs/decisions/`.
 
+- **2026-11-15, [ADR 0021](decisions/0021-stake-usd-rps-first-to-3.md):** stake picker shows "sats" and a ≈ USD hint (no limits text); RPS is first to 3; the finished board stays up briefly before the result.
 - **2026-11-15, [ADR 0017](decisions/0017-practice-bot.md) to [ADR 0020](decisions/0020-browser-support-check.md):** free practice vs a bot with no account, a public escrow page (held vs owed), haptics/sound cues, and a browser support check before the passkey prompt.
 - **2026-11-15, [ADR 0014](decisions/0014-extra-games.md):** all five games shipped. §4 deviations: RPS can draw only after a 9-round cap; Trivia has 5 questions × 20 s from a bundled bank with no speed bonus; Pool rules are simplified further.
 - **2026-11-15, [ADR 0013](decisions/0013-custodial-escrow-active.md):** direct Spark HTLCs between user wallets are disabled network-side (breez/spark-sdk#1123). **Active mode is custodial escrow:** both stakes are paid into a server escrow wallet, and the winner is paid the whole pot instantly. The ADR 0002 HTLC mode stays in the code, dormant (`ESCROW_MODE=htlc`).

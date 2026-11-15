@@ -828,6 +828,12 @@ a.card {
   font-size: var(--cc-text-sm);
 }
 
+.stake__units {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--cc-space-2);
+}
+
 .h2h {
   font-weight: 800;
 }

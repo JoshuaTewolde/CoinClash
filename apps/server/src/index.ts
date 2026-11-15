@@ -38,6 +38,8 @@ async function main() {
     });
     closers.push(() => sdk.disconnect());
     deps.verifier = breezVerifier(sdk);
+    deps.btcUsdRate = async () =>
+      (await sdk.listFiatRates()).rates.find((r) => r.coin === 'USD')?.value ?? null;
     const house = breezHouseWallet(sdk);
     console.info(`[coinclash] house wallet connected (${await house.balance()} sats)`);
     if (config.ESCROW_MODE === 'escrow') {

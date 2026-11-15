@@ -45,6 +45,8 @@ export interface AppDeps {
   payoutRetryMs?: number;
   /** Pays regtest welcome bonuses when set (NETWORK=regtest only). */
   bonus?: WelcomeBonus;
+  /** BTC price in USD (Breez `listFiatRates`), for showing stakes in dollars. */
+  btcUsdRate?: () => Promise<number | null>;
   matches?: MatchRepo;
   users?: UserRepo;
   /** Web Push subscriptions. */
@@ -246,6 +248,22 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
     } catch (err) {
       res.status(404).json({ ok: false, error: userMessage(err) });
     }
+  });
+
+  /** BTC/USD for the stake picker's dollar hint. Cached 5 minutes; null when unknown. */
+  let rateCache: { at: number; usd: number | null } | null = null;
+  app.get('/api/rate', async (_req, res) => {
+    const now = clock();
+    if (!rateCache || now - rateCache.at > 300_000) {
+      let usd: number | null = null;
+      try {
+        usd = (await deps.btcUsdRate?.()) ?? null;
+      } catch (err) {
+        console.error('[coinclash] fiat rate failed', err);
+      }
+      rateCache = { at: usd === null ? now - 240_000 : now, usd };
+    }
+    res.json({ usd: rateCache.usd });
   });
 
   /** Public escrow report (ADR 0018): balance vs. what is owed. Cached briefly. */

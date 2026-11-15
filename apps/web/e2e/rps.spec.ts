@@ -42,19 +42,18 @@ test('full rock paper scissors match between two phones', async ({ browser }) =>
     await expect(p.getByText('Your turn', { exact: true })).toBeVisible();
   }
 
-  // Alice always throws rock, Bob always scissors: Alice wins 2-0.
-  for (let round = 1; round <= 2; round++) {
+  // Alice always throws rock, Bob always scissors: Alice wins 3-0 (first to 3).
+  for (let round = 1; round <= 3; round++) {
     await alice.getByRole('button', { name: 'Rock', exact: true }).click();
     await expect(alice.getByText('Waiting for opponent…')).toBeVisible();
     // Bob sees that Alice has picked, but not what.
     await expect(bob.getByText('They’ve picked. Your move!')).toBeVisible();
     await bob.getByRole('button', { name: 'Scissors', exact: true }).click();
-    if (round < 2) {
-      for (const p of [alice, bob]) await expect(roundChips(p)).toHaveCount(round);
-      await expect(alice.getByText('You win the round!')).toBeVisible();
-      await expect(bob.getByText('They win the round')).toBeVisible();
-      await expect(alice.getByLabel('Score: you 1, them 0')).toBeVisible();
-    }
+    // Every round's result shows, the last one too, before the result screen.
+    for (const p of [alice, bob]) await expect(roundChips(p)).toHaveCount(round);
+    await expect(alice.getByText('You win the round!')).toBeVisible();
+    await expect(bob.getByText('They win the round')).toBeVisible();
+    await expect(alice.getByLabel(`Score: you ${round}, them 0`)).toBeVisible();
   }
 
   await expect(alice.getByRole('heading', { name: 'You won!' })).toBeVisible();

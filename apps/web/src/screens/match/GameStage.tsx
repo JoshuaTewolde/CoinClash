@@ -15,7 +15,8 @@ import { cue } from '../../lib/feedback';
 import { useSnapshot, useStoreApi } from '../../lib/StoreContext';
 import { opponentName } from '../../match/describe';
 
-export function GameStage({ view }: { view: MatchView }) {
+/** `over`: the game just ended; the final board shows briefly before the result screen. */
+export function GameStage({ view, over = false }: { view: MatchView; over?: boolean }) {
   const { network } = useSnapshot();
   const store = useStoreApi();
   const now = useNow(500);
@@ -51,10 +52,10 @@ export function GameStage({ view }: { view: MatchView }) {
             {meta.name} vs {them}
           </span>
           <span className="turn" aria-live="polite">
-            {myTurn ? 'Your turn' : `${them}'s turn`}
+            {over ? 'Game over' : myTurn ? 'Your turn' : `${them}'s turn`}
           </span>
         </div>
-        {game.turnEndsAt && <Timer deadline={game.turnEndsAt} label="Turn" />}
+        {!over && game.turnEndsAt && <Timer deadline={game.turnEndsAt} label="Turn" />}
       </header>
 
       <div className="row" style={{ justifyContent: 'center' }}>
@@ -63,7 +64,7 @@ export function GameStage({ view }: { view: MatchView }) {
         </span>
       </div>
 
-      {view.opponentGraceEndsAt && (
+      {!over && view.opponentGraceEndsAt && (
         <p className="banner" role="status">
           {them} lost connection. If they’re not back in{' '}
           {formatClock(view.opponentGraceEndsAt - now)}, you win.
@@ -80,7 +81,7 @@ export function GameStage({ view }: { view: MatchView }) {
 
       <ErrorText>{error}</ErrorText>
       <div className="spacer" />
-      {confirmResign ? (
+      {over ? null : confirmResign ? (
         <div className="grid-2">
           <Button onClick={() => setConfirmResign(false)}>Keep playing</Button>
           <Button variant="primary" onClick={resign}>

@@ -1,5 +1,6 @@
 /** Typeable stake (ADR 0009 item 3): digits only, separators, clamp on blur, –/+ and presets. */
 import { useEffect, useState } from 'react';
+import { usdLabel, useBtcUsd } from '../lib/rate';
 
 export function clampStake(value: number, min: number, max: number): number {
   if (!Number.isFinite(value) || value <= 0) return min;
@@ -29,6 +30,8 @@ export function StakeInput({
   label?: string;
 }) {
   const [text, setText] = useState(value ? value.toLocaleString('en-US') : '');
+  const rate = useBtcUsd();
+  const dollars = usdLabel(value, rate);
   useEffect(() => {
     setText(value ? value.toLocaleString('en-US') : '');
   }, [value]);
@@ -81,9 +84,14 @@ export function StakeInput({
             </button>
           ))}
       </div>
-      <span className="muted">
-        sats · {min.toLocaleString('en-US')} to {max.toLocaleString('en-US')}
-      </span>
+      <div className="stake__units">
+        <span className="muted">sats</span>
+        {dollars && (
+          <span className="muted" aria-label="US dollar equivalent">
+            {dollars}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

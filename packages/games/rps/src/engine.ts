@@ -3,7 +3,7 @@
  * the server keeps picks hidden until both are in, then reveals.
  *
  * Rules
- * - Best of 3 by default (first to 2 round wins); the creator may choose best of 5.
+ * - Best of 5 by default (first to 3 round wins, owner feedback); best of 3 is an option.
  * - A drawn round (same pick) is replayed. Drawn rounds still count toward the round cap.
  * - Round cap: 3 × bestOf rounds (9 for best of 3). If nobody has won by then, the match is a
  *   draw (both stakes are refunded).
@@ -161,7 +161,7 @@ export const rps: GamePlugin<RpsState, RpsMove, RpsView> = {
     const parsed = OptionsSchema.safeParse(options);
     return {
       players: [a, b],
-      bestOf: parsed.success ? parsed.data.bestOf : 3,
+      bestOf: parsed.success ? parsed.data.bestOf : 5,
       current: [null, null],
       history: [],
       wins: [0, 0],

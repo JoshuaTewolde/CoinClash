@@ -86,3 +86,22 @@ describe('escrow report', () => {
     await bad.close();
   });
 });
+
+describe('GET /api/rate', () => {
+  it('serves the Breez BTC/USD rate, or null when unknown or failing', async () => {
+    const serve = async (btcUsdRate?: () => Promise<number | null>) => {
+      const a = createApp(loadConfig({ NETWORK: 'mock', PORT: '0' }), { btcUsdRate });
+      await new Promise<void>((r) => a.http.listen(0, r));
+      const port = (a.http.address() as AddressInfo).port;
+      const body = await (await fetch(`http://127.0.0.1:${port}/api/rate`)).json();
+      await a.close();
+      return body;
+    };
+    expect(await serve(async () => 97_000)).toEqual({ usd: 97_000 });
+    expect(await serve()).toEqual({ usd: null });
+    const silence = console.error;
+    console.error = () => undefined;
+    expect(await serve(() => Promise.reject(new Error('x')))).toEqual({ usd: null });
+    console.error = silence;
+  });
+});

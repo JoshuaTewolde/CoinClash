@@ -49,6 +49,7 @@ export const api = {
   invite: (code: string) => request<InvitePreview>(`/api/invites/${encodeURIComponent(code)}`),
   joinCode: (digits: string) =>
     request<{ inviteCode: string }>(`/api/join/${encodeURIComponent(digits)}`),
+  rate: () => request<{ usd: number | null }>('/api/rate'),
   escrow: () => request<EscrowReport>('/api/escrow'),
   activity: (token: string) => request<ActivityItem[]>('/api/activity', { token }),
 };
