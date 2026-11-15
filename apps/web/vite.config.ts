@@ -9,6 +9,9 @@ const server = process.env.COINCLASH_SERVER ?? 'http://localhost:8787';
 export default defineConfig({
   plugins: [react()],
   envDir: '../../',
+  // The Breez SDK loads its WASM via a URL relative to its own module. Vite's dependency
+  // pre-bundling moves the module and breaks that URL in dev, so serve it as-is.
+  optimizeDeps: { exclude: ['@breeztech/breez-sdk-spark'] },
   server: {
     port: 5173,
     proxy: {
