@@ -125,7 +125,16 @@ async function main() {
             'mutation RequestRegtestFunds($address: String!, $amount_sats: Long!) { request_regtest_funds(input: {address: $address, amount_sats: $amount_sats}) { transaction_hash } }',
         }),
       });
-      console.log(`faucet: ${res.status} ${await res.text()}`);
+      const body = await res.text();
+      if (!res.ok || body.includes('"errors"')) {
+        // The faucet API needs a Lightspark login; fall back to the web faucet.
+        console.log(`Faucet API refused (${res.status}). Fund it by hand instead:`);
+        console.log(`  1. Open https://app.lightspark.com/regtest-faucet`);
+        console.log(`  2. Send ${amount} sats to ${address}`);
+        console.log('Waiting for the deposit (up to 60 min)…');
+      } else {
+        console.log(`faucet: ${body}`);
+      }
       const after = await waitFor(
         'the deposit to be claimed',
         async () => {
@@ -136,7 +145,7 @@ async function main() {
             console.log(`unclaimed deposits: ${deposits.length} (waiting for confirmations)`);
           return null;
         },
-        900,
+        3600,
       );
       console.log(`balance: ${before} → ${after} sats`);
       await sdk.disconnect();
