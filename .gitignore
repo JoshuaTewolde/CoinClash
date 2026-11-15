@@ -1,0 +1,22 @@
+node_modules/
+dist/
+dev-dist/
+coverage/
+.data/
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# secrets: never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.mnemonic
+
+# playwright
+test-results/
+playwright-report/
