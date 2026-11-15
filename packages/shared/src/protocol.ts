@@ -8,9 +8,10 @@ import type { Network } from './network.js';
 export const MATCH_STATUSES = [
   'PROPOSED', // created by the challenger, nobody has opened the invite yet
   'NEGOTIATING', // opponent joined; proposals go back and forth
-  'AWAITING_LOCKS', // stake agreed; both players must lock HTLCs to each other
+  'AWAITING_DEPOSITS', // stake agreed; both players pay their stake into escrow (ADR 0013)
+  'AWAITING_LOCKS', // HTLC mode (dormant, ADR 0002): both players lock HTLCs to each other
   'IN_PROGRESS',
-  'SETTLING', // result known; winner's code(s) released, waiting for claim confirmation
+  'SETTLING', // result known; escrow paying out (or, HTLC mode, codes released awaiting claims)
   'SETTLED',
   'DECLINED',
   'CANCELLED', // locks not completed in time; any lock returns at expiry
@@ -79,6 +80,8 @@ export const ClientCommands = {
   /** "I claimed my winnings." Signed by the claiming wallet. */
   'match:claimed': z.object({ matchId: id, signed: SignedMessageSchema }),
   'match:rematch': z.object({ matchId: id }),
+  /** "I paid my deposit": a hint to check the escrow now. Never trusted as proof of payment. */
+  'match:paid': z.object({ matchId: id }),
 } as const;
 export type ClientCommandName = keyof typeof ClientCommands;
 export type ClientCommand<N extends ClientCommandName> = z.infer<(typeof ClientCommands)[N]>;
@@ -111,6 +114,25 @@ export interface LockInfo {
   readonly locked: Readonly<Record<string, boolean>>;
 }
 
+export interface PayoutInfo {
+  readonly player: string;
+  /** `payout`: winnings (whole pot, or own stake back on a draw). `refund`: match never started. */
+  readonly kind: 'payout' | 'refund';
+  readonly amount: number;
+  readonly status: 'pending' | 'paid' | 'failed';
+}
+
+/** Escrow state (ADR 0013). Present when the match uses custodial escrow. */
+export interface EscrowInfo {
+  /** Unix ms by which both deposits must arrive. */
+  readonly deadline: number;
+  /** Per player: has their deposit arrived? */
+  readonly paid: Readonly<Record<string, boolean>>;
+  /** The viewer's own deposit invoice (only ever sent to that player), or null until issued. */
+  readonly yourInvoice: string | null;
+  readonly payouts: readonly PayoutInfo[];
+}
+
 export interface GameInfo {
   readonly view: unknown;
   readonly waitingOn: readonly string[];
@@ -134,6 +156,9 @@ export interface MatchView {
   readonly you: string | null;
   /** Player whose turn it is to respond to the latest proposal. */
   readonly respondent: string | null;
+  /** `escrow` (active, ADR 0013) or `htlc` (dormant, ADR 0002). */
+  readonly mode: 'escrow' | 'htlc';
+  readonly escrow: EscrowInfo | null;
   readonly locks: LockInfo | null;
   readonly game: GameInfo | null;
   /** Claim window end (Unix ms), set once settling. */

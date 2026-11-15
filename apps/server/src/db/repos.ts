@@ -23,6 +23,10 @@ export interface MatchRepo {
   save(doc: MatchDoc): Promise<void>;
   listForPlayer(player: string, limit: number): Promise<MatchDoc[]>;
   listUnfinished(): Promise<MatchDoc[]>;
+  /** The match that issued this escrow deposit invoice. */
+  getByInvoice(invoice: string): Promise<MatchDoc | null>;
+  /** Matches (any status) with escrow payouts or refunds not yet paid. */
+  listOpenPayouts(): Promise<MatchDoc[]>;
 }
 
 export interface UserRepo {
@@ -60,6 +64,13 @@ export class MemoryMatchRepo implements MatchRepo {
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, limit)
       .map((d) => structuredClone(d));
+  }
+  async getByInvoice(invoice: string) {
+    const d = [...this.docs.values()].find((x) => x.invoices.includes(invoice));
+    return d ? structuredClone(d) : null;
+  }
+  async listOpenPayouts() {
+    return [...this.docs.values()].filter((d) => d.payoutsOpen).map((d) => structuredClone(d));
   }
   async listUnfinished() {
     return [...this.docs.values()]

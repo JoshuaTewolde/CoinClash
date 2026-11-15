@@ -27,6 +27,12 @@ export class MongoMatchRepo implements MatchRepo {
       .limit(limit)
       .toArray();
   }
+  async getByInvoice(invoice: string) {
+    return this.col.findOne({ invoices: invoice } as Filter<MatchDoc>);
+  }
+  async listOpenPayouts() {
+    return this.col.find({ payoutsOpen: true } as Filter<MatchDoc>).toArray();
+  }
   async listUnfinished() {
     return this.col.find({ status: { $nin: FINAL } } as Filter<MatchDoc>).toArray();
   }
@@ -63,6 +69,8 @@ export async function connectMongo(uri: string, dbName: string): Promise<MongoRe
     matches.createIndex({ challenger: 1, updatedAt: -1 }),
     matches.createIndex({ opponent: 1, updatedAt: -1 }),
     matches.createIndex({ status: 1 }),
+    matches.createIndex({ invoices: 1 }),
+    matches.createIndex({ payoutsOpen: 1 }, { partialFilterExpression: { payoutsOpen: true } }),
   ]);
   return { client, db, matches: new MongoMatchRepo(matches), users: new MongoUserRepo(users) };
 }

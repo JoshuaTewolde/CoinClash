@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { createApp, type AppDeps } from './app.js';
 import { WelcomeBonus } from './bonus.js';
-import { breezHouseWallet, breezVerifier, connectBreez } from './breez.js';
+import { breezEscrow, breezHouseWallet, breezVerifier, connectBreez } from './breez.js';
 import { loadConfig } from './config.js';
 import { connectMongo } from './db/mongo.js';
 import { MemoryMatchRepo, MemoryUserRepo } from './db/repos.js';
@@ -39,6 +39,21 @@ async function main() {
     deps.verifier = breezVerifier(sdk);
     const house = breezHouseWallet(sdk);
     console.info(`[coinclash] house wallet connected (${await house.balance()} sats)`);
+    if (config.ESCROW_MODE === 'escrow') {
+      if (!config.ESCROW_MNEMONIC) throw new Error('ESCROW_MODE=escrow needs ESCROW_MNEMONIC');
+      const escrowDir = `${config.BREEZ_STORAGE_DIR}-escrow`;
+      mkdirSync(escrowDir, { recursive: true });
+      const escrowSdk = await connectBreez({
+        network: config.NETWORK,
+        apiKey: config.BREEZ_API_KEY,
+        mnemonic: config.ESCROW_MNEMONIC,
+        storageDir: escrowDir,
+      });
+      closers.push(() => escrowSdk.disconnect());
+      deps.escrow = breezEscrow(escrowSdk);
+      const info = await escrowSdk.getInfo({ ensureSynced: true });
+      console.info(`[coinclash] escrow wallet connected (${info.balanceSats} sats held)`);
+    }
     if (config.NETWORK === 'regtest' && config.WELCOME_BONUS_ENABLED) {
       deps.bonus = new WelcomeBonus({
         users: deps.users,

@@ -43,6 +43,7 @@ export function newDoc(overrides: Partial<Parameters<typeof createMatchDoc>[0]> 
     stake: 2000,
     challenger: 'alice',
     now: T0,
+    mode: 'htlc', // these helpers drive the (dormant) HTLC flow; escrow has its own tests
     ...overrides,
   });
 }

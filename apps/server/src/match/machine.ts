@@ -1,5 +1,6 @@
 /**
- * The match state machine (ADR 0002), as a **pure** function: `(doc, command, env) → result`.
+ * The match state machine (ADR 0013 escrow, active; ADR 0002 HTLC, dormant), as a **pure**
+ * function: `(doc, command, env) → result`.
  * No I/O, no clocks, no randomness: `env` supplies time and secret generation. The service
  * (service.ts) persists results, schedules timers, verifies signatures and notifies clients.
  */
@@ -15,7 +16,14 @@ import {
   type GameSession,
 } from '@coinclash/game-sdk';
 import { FINAL_STATUSES, type MatchStatus } from '@coinclash/shared';
-import { opponentOf, playersOf, type MatchDoc, type Secret } from './types.js';
+import {
+  opponentOf,
+  playersOf,
+  type EscrowMode,
+  type MatchDoc,
+  type Payout,
+  type Secret,
+} from './types.js';
 
 export class MatchError extends Error {
   override readonly name = 'MatchError';
@@ -52,6 +60,12 @@ export type MatchCommand =
   | { type: 'disconnected'; player: string }
   /** `player` confirmed (with a verified signature) claiming their winnings. */
   | { type: 'claimed'; player: string }
+  /** Escrow: deposit invoices were issued (by the service, from the escrow wallet). */
+  | { type: 'invoicesIssued'; invoices: Readonly<Record<string, string>> }
+  /** Escrow: the escrow wallet received `player`'s deposit (detected server-side, never client-claimed). */
+  | { type: 'depositReceived'; player: string; paymentId: string; amount: number }
+  /** Escrow: outcome of paying the obligation `key` (`${kind}:${player}`). */
+  | { type: 'payoutResult'; key: string; ok: boolean; paymentId?: string; error?: string }
   /** Process every deadline that has passed. */
   | { type: 'tick' };
 
@@ -97,6 +111,8 @@ export interface NewMatchParams {
   readonly stake: number;
   readonly challenger: string;
   readonly now: number;
+  /** Defaults to `escrow`, the active mode (ADR 0013). */
+  readonly mode?: EscrowMode;
 }
 
 /** A fresh PROPOSED match. Ids and seed are passed in so this stays pure. */
@@ -108,6 +124,7 @@ export function createMatchDoc(p: NewMatchParams): MatchDoc {
     options: p.options ?? null,
     seed: p.seed,
     status: 'PROPOSED',
+    mode: p.mode ?? 'escrow',
     stake: p.stake,
     proposals: [{ by: p.challenger, amount: p.stake, at: p.now }],
     challenger: p.challenger,
@@ -124,6 +141,10 @@ export function createMatchDoc(p: NewMatchParams): MatchDoc {
     claimDeadline: null,
     claimedBy: [],
     graceEndsAt: {},
+    deposits: {},
+    invoices: [],
+    payouts: {},
+    payoutsOpen: false,
     rematchOf: null,
     rematchId: null,
     transitions: [{ from: null, to: 'PROPOSED', at: p.now, cause: `${p.challenger} challenged` }],
@@ -159,6 +180,17 @@ function requireRespondent(doc: MatchDoc, player: string): void {
 function agree(doc: MatchDoc, stake: number, env: MachineEnv, cause: string): MatchDoc {
   const plugin = pluginFor(env, doc.gameId);
   const players = playersOf(doc);
+  if (doc.mode === 'escrow') {
+    // ADR 0013: both pay their stake into escrow; the service issues the invoices next.
+    return {
+      ...to(doc, 'AWAITING_DEPOSITS', env.now, cause),
+      stake,
+      lockDeadline: env.now + env.config.lockTimeoutMs,
+      deposits: Object.fromEntries(
+        players.map((p) => [p, { invoice: null, paymentId: null, paidAt: null }]),
+      ),
+    };
+  }
   const lockTimeoutSecs = Math.ceil(env.config.lockTimeoutMs / 1000);
   return {
     ...to(doc, 'AWAITING_LOCKS', env.now, cause),
@@ -182,24 +214,72 @@ function startGame(doc: MatchDoc, env: MachineEnv): MatchDoc {
     options: doc.options,
   }) as GameSession<unknown>;
   return {
-    ...to(doc, 'IN_PROGRESS', env.now, 'both stakes locked'),
+    ...to(
+      doc,
+      'IN_PROGRESS',
+      env.now,
+      doc.mode === 'escrow' ? 'both stakes secured' : 'both stakes locked',
+    ),
     session,
     turnStartedAt: env.now,
     matchCapAt: env.now + plugin.maxMatchSeconds * 1000,
   };
 }
 
-/** If the game just ended, release the code(s) and move to SETTLING. */
+const payoutKey = (kind: Payout['kind'], player: string) => `${kind}:${player}`;
+
+/** Add escrow obligations; recomputes `payoutsOpen`. */
+function addPayouts(
+  doc: MatchDoc,
+  items: readonly { player: string; kind: Payout['kind']; amount: number }[],
+): MatchDoc {
+  const payouts = { ...doc.payouts };
+  for (const i of items) {
+    const key = payoutKey(i.kind, i.player);
+    if (payouts[key] || i.amount <= 0) continue; // never create the same obligation twice
+    payouts[key] = { ...i, status: 'pending', paymentId: null, attempts: 0, lastError: null };
+  }
+  return { ...doc, payouts, payoutsOpen: Object.values(payouts).some((p) => p.status !== 'paid') };
+}
+
+/** Refund every deposit that arrived (match cancelled before the game started). */
+function refundDeposits(doc: MatchDoc): MatchDoc {
+  return addPayouts(
+    doc,
+    Object.entries(doc.deposits)
+      .filter(([, d]) => d.paymentId !== null)
+      .map(([player]) => ({ player, kind: 'refund' as const, amount: doc.stake })),
+  );
+}
+
+/** If the game just ended, settle it: escrow pays out; HTLC mode releases the code(s). */
 function settleIfOver(
   doc: MatchDoc,
   env: MachineEnv,
   notices: MatchNotice[],
   cause: string,
 ): MatchDoc {
-  if (doc.status !== 'IN_PROGRESS' || !doc.session || !doc.secrets) return doc;
+  if (doc.status !== 'IN_PROGRESS' || !doc.session) return doc;
   const plugin = pluginFor(env, doc.gameId);
   const result = sessionResult(plugin, doc.session);
   if (result.status === 'ongoing') return doc;
+  if (doc.mode === 'escrow') {
+    // Win: the whole pot to the winner at once. Draw: each player's stake straight back.
+    const items =
+      result.status === 'win'
+        ? [{ player: result.winner, kind: 'payout' as const, amount: doc.stake * 2 }]
+        : playersOf(doc).map((p) => ({ player: p, kind: 'payout' as const, amount: doc.stake }));
+    return addPayouts(
+      {
+        ...to(doc, 'SETTLING', env.now, `${cause}: ${result.status}`),
+        result,
+        turnStartedAt: null,
+        graceEndsAt: {},
+      },
+      items,
+    );
+  }
+  if (!doc.secrets) return doc;
   // Win: only the winner's code. Draw: both codes, so each side claims the other's
   // identical stake and the net is zero (ADR 0002 step 4).
   const released = result.status === 'win' ? [result.winner] : playersOf(doc);
@@ -241,6 +321,11 @@ function tick(doc: MatchDoc, env: MachineEnv, notices: MatchNotice[]): MatchDoc 
     case 'AWAITING_LOCKS':
       if (doc.lockDeadline !== null && now >= doc.lockDeadline) {
         return to(doc, 'CANCELLED', now, 'lock window passed');
+      }
+      return doc;
+    case 'AWAITING_DEPOSITS':
+      if (doc.lockDeadline !== null && now >= doc.lockDeadline) {
+        return refundDeposits(to(doc, 'CANCELLED', now, 'deposit window passed'));
       }
       return doc;
     case 'IN_PROGRESS': {
@@ -388,6 +473,49 @@ export function applyCommand(doc: MatchDoc, cmd: MatchCommand, env: MachineEnv):
       }
       break;
     }
+    case 'invoicesIssued': {
+      requireStatus(doc, 'AWAITING_DEPOSITS');
+      const deposits = { ...doc.deposits };
+      const invoices = [...doc.invoices];
+      for (const [player, invoice] of Object.entries(cmd.invoices)) {
+        const d = deposits[player];
+        if (!d || d.invoice) continue; // only the first invoice per player counts
+        deposits[player] = { ...d, invoice };
+        invoices.push(invoice);
+      }
+      next = { ...doc, deposits, invoices };
+      break;
+    }
+    case 'depositReceived': {
+      const d = doc.deposits[cmd.player];
+      if (!d) throw new MatchError('No deposit expected from this player');
+      if (d.paymentId) return { doc, notices }; // idempotent: duplicate events / polls
+      const paid = { ...d, paymentId: cmd.paymentId, paidAt: now };
+      next = { ...doc, deposits: { ...doc.deposits, [cmd.player]: paid } };
+      if (doc.status !== 'AWAITING_DEPOSITS') {
+        // Arrived after the window closed: the money is ours to return.
+        next = addPayouts(next, [{ player: cmd.player, kind: 'refund', amount: cmd.amount }]);
+      } else if (cmd.amount < doc.stake) {
+        // Underpaid (fixed-amount invoices make this unlikely): refund it and treat as unpaid.
+        next = addPayouts(doc, [{ player: cmd.player, kind: 'refund', amount: cmd.amount }]);
+      } else if (playersOf(next).every((p) => next.deposits[p]?.paymentId)) {
+        next = startGame(next, env);
+      }
+      break;
+    }
+    case 'payoutResult': {
+      const p = doc.payouts[cmd.key];
+      if (!p) throw new MatchError('Unknown payout');
+      if (p.status === 'paid') return { doc, notices };
+      const updated: Payout = cmd.ok
+        ? { ...p, status: 'paid', paymentId: cmd.paymentId ?? null, lastError: null }
+        : { ...p, status: 'failed', attempts: p.attempts + 1, lastError: cmd.error ?? 'failed' };
+      const payouts = { ...doc.payouts, [cmd.key]: updated };
+      const open = Object.values(payouts).some((x) => x.status !== 'paid');
+      next = { ...doc, payouts, payoutsOpen: open };
+      if (!open && doc.status === 'SETTLING') next = to(next, 'SETTLED', now, 'winnings paid');
+      break;
+    }
     case 'tick':
       next = tick(doc, env, notices);
       if (next === doc) return { doc, notices };
@@ -404,6 +532,7 @@ export function nextDeadline(
   const candidates: number[] = [];
   switch (doc.status) {
     case 'AWAITING_LOCKS':
+    case 'AWAITING_DEPOSITS':
       if (doc.lockDeadline !== null) candidates.push(doc.lockDeadline);
       break;
     case 'IN_PROGRESS': {

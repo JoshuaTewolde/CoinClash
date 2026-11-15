@@ -1,8 +1,8 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { join } from 'node:path';
 import type { AnyGamePlugin } from '@coinclash/game-sdk';
-import type { SignatureVerifier } from '@coinclash/rail';
-import { mockVerifier } from '@coinclash/rail/mock';
+import type { EscrowRail, SignatureVerifier } from '@coinclash/rail';
+import { MockEscrow, MockNetwork, mockVerifier } from '@coinclash/rail/mock';
 import {
   ClientCommands,
   LoginRequestSchema,
@@ -27,6 +27,11 @@ import { MatchService } from './match/service.js';
 import { playersOf } from './match/types.js';
 
 export interface AppDeps {
+  /** Escrow wallet. Defaults to a mock escrow on NETWORK=mock; index.ts injects Breez otherwise. */
+  escrow?: EscrowRail;
+  /** Escrow timing overrides (tests). */
+  depositPollMs?: number;
+  payoutRetryMs?: number;
   /** Pays regtest welcome bonuses when set (NETWORK=regtest only). */
   bonus?: WelcomeBonus;
   matches?: MatchRepo;
@@ -63,6 +68,10 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
   const clock = deps.clock ?? Date.now;
   const verifier =
     deps.verifier ?? (config.NETWORK === 'mock' ? mockVerifier : unavailableVerifier);
+  // NETWORK=mock: one in-memory Spark network shared by the escrow and the browsers' wallets.
+  const mockNet =
+    config.NETWORK === 'mock' ? new MockNetwork(() => Math.floor(clock() / 1000)) : null;
+  const escrow = deps.escrow ?? (mockNet ? new MockEscrow(mockNet) : undefined);
 
   const auth = new Auth({
     secret: config.SESSION_SECRET,
@@ -88,6 +97,10 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
     plugins,
     verifier,
     clock,
+    escrow,
+    escrowMode: config.ESCROW_MODE,
+    depositPollMs: deps.depositPollMs,
+    payoutRetryMs: deps.payoutRetryMs,
     config: {
       stakeMin: config.STAKE_MIN_SATS,
       stakeMax: config.STAKE_MAX_SATS,
@@ -135,11 +148,8 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
   });
 
   // Shared in-memory Spark network for browsers. NETWORK=mock ONLY (ADR 0011).
-  if (config.NETWORK === 'mock') {
-    const { router } = mockWalletRouter({
-      welcomeSats: config.WELCOME_BONUS_SATS,
-      now: () => Math.floor(clock() / 1000),
-    });
+  if (mockNet) {
+    const { router } = mockWalletRouter({ welcomeSats: config.WELCOME_BONUS_SATS, net: mockNet });
     app.use('/api/mock-wallet', router);
   }
 
@@ -255,6 +265,7 @@ export function createApp(config: ServerConfig, deps: AppDeps = {}): App {
       service.view(await service.command(i.matchId, { type: 'resign', player: me }), me),
     'match:claimed': async (me, i) => service.view(await service.claimed(me, i), me),
     'match:rematch': async (me, i) => service.view(await service.rematch(me, i.matchId), me),
+    'match:paid': async (me, i) => service.view(await service.checkDeposits(i.matchId), me),
   };
 
   io.on('connection', (socket: Socket) => {

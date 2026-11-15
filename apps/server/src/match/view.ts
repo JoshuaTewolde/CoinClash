@@ -52,6 +52,24 @@ export function viewFor(
       }
     : null;
 
+  const escrow =
+    doc.mode === 'escrow' && doc.lockDeadline !== null && Object.keys(doc.deposits).length > 0
+      ? {
+          deadline: doc.lockDeadline,
+          paid: Object.fromEntries(
+            Object.entries(doc.deposits).map(([p, d]) => [p, d.paymentId !== null]),
+          ),
+          // A player's invoice only ever goes to that player.
+          yourInvoice: you ? (doc.deposits[you]?.invoice ?? null) : null,
+          payouts: Object.values(doc.payouts).map((p) => ({
+            player: p.player,
+            kind: p.kind,
+            amount: p.amount,
+            status: p.status,
+          })),
+        }
+      : null;
+
   return {
     id: doc._id,
     inviteCode: doc.inviteCode,
@@ -63,6 +81,8 @@ export function viewFor(
     opponent: doc.opponent ? summary(doc.opponent) : null,
     you,
     respondent: respondentOf(doc),
+    mode: doc.mode,
+    escrow,
     locks,
     game,
     claimDeadline: doc.claimDeadline,

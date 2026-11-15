@@ -113,7 +113,7 @@ class SimPlayer {
 }
 
 async function startApp(): Promise<{ app: App; baseUrl: string }> {
-  const app = createApp(loadConfig({ NETWORK: 'mock', PORT: '0' }), {
+  const app = createApp(loadConfig({ NETWORK: 'mock', PORT: '0', ESCROW_MODE: 'htlc' }), {
     matches: repos.matches,
     users: repos.users,
     clock: () => chainTime * 1000,

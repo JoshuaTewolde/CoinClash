@@ -17,6 +17,7 @@ function setup(matches = new MemoryMatchRepo(), users = new MemoryUserRepo()) {
     plugins: games,
     verifier: mockVerifier,
     config: CONFIG,
+    escrowMode: 'htlc', // this suite covers the dormant HTLC flow; see escrow.test.ts
     events: { changed, codeReleased: (player, release) => codes.push({ player, release }) },
   });
   return { service, matches, users, changed, codes };

@@ -26,15 +26,22 @@ const LockBody = z.object({
 });
 const ClaimBody = z.object({ preimage: z.string().regex(/^[0-9a-f]{64}$/) });
 
+const PayInvoiceBody = z.object({
+  invoice: z.string().min(1).max(512),
+  key: z.string().min(1).max(256),
+});
+
 export interface MockWalletOptions {
   /** Sats a brand-new wallet starts with (stands in for the regtest welcome bonus). */
   readonly welcomeSats: number;
   /** Clock in Unix seconds. */
   readonly now?: () => number;
+  /** Share a network (e.g. with the mock escrow). */
+  readonly net?: MockNetwork;
 }
 
 export function mockWalletRouter(opts: MockWalletOptions): { router: Router; net: MockNetwork } {
-  const net = new MockNetwork(opts.now);
+  const net = opts.net ?? new MockNetwork(opts.now);
   const known = new Set<string>();
   const router = express.Router();
 
@@ -100,6 +107,13 @@ export function mockWalletRouter(opts: MockWalletOptions): { router: Router; net
   router.post(
     '/:id/claim',
     handle((req) => wallet(req.params.id).claim(ClaimBody.parse(req.body).preimage)),
+  );
+  router.post(
+    '/:id/pay-invoice',
+    handle((req) => {
+      const body = PayInvoiceBody.parse(req.body);
+      return wallet(req.params.id).payInvoice(body.invoice, body.key);
+    }),
   );
   router.post(
     '/:id/faucet',
